@@ -5,6 +5,7 @@ RUN apt-get update && \
     binfmt-support \
     qemu \
     qemu-user-static \
+    jq \
     --no-install-recommends && \
     rm -rf /var/lib/apt/lists/*
 
