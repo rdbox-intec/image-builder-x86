@@ -97,10 +97,7 @@ PACKAGECLOUD_FPR=418A7F2FB0E1E6E7EABF6FE8C2E73424D59097AB
 PACKAGECLOUD_KEY_URL=https://packagecloud.io/gpg.key
 get_gpg "${PACKAGECLOUD_FPR}" "${PACKAGECLOUD_KEY_URL}"
 
-echo 'deb https://packagecloud.io/Hypriot/rpi/debian/ jessie main' > /etc/apt/sources.list.d/hypriot.list
-
-# set up hypriot schatzkiste repository for generic packages
-echo 'deb https://packagecloud.io/Hypriot/Schatzkiste/debian/ jessie main' >> /etc/apt/sources.list.d/hypriot.list
+echo 'deb https://packagecloud.io/Hypriot/rpi/debian/ stretch main' > /etc/apt/sources.list.d/hypriot.list
 
 # set up Docker CE repository
 DOCKERREPO_FPR=9DC858229FC7DD38854AE2D88D81803C0EBFCD88
@@ -108,31 +105,29 @@ DOCKERREPO_KEY_URL=https://download.docker.com/linux/raspbian/gpg
 get_gpg "${DOCKERREPO_FPR}" "${DOCKERREPO_KEY_URL}"
 
 CHANNEL=edge # stable, test or edge
-echo "deb [arch=armhf] https://download.docker.com/linux/raspbian jessie $CHANNEL" > /etc/apt/sources.list.d/docker.list
+echo "deb [arch=armhf] https://download.docker.com/linux/raspbian stretch $CHANNEL" > /etc/apt/sources.list.d/docker.list
 
 
 RPI_ORG_FPR=CF8A1AF502A2AA2D763BAE7E82B129927FA3303E RPI_ORG_KEY_URL=http://archive.raspberrypi.org/debian/raspberrypi.gpg.key
 get_gpg "${RPI_ORG_FPR}" "${RPI_ORG_KEY_URL}"
 
-echo 'deb http://archive.raspberrypi.org/debian/ jessie main' | tee /etc/apt/sources.list.d/raspberrypi.list
+echo 'deb http://archive.raspberrypi.org/debian/ stretch main' | tee /etc/apt/sources.list.d/raspberrypi.list
 
-# install cloud-init
-## jessie backports
-echo "deb http://ftp.`curl -s ipinfo.io/52.193.175.205/country | tr "[:upper:]" "[:lower:]"`.debian.org/debian jessie-backports main contrib non-free" | tee /etc/apt/sources.list.d/jessie-backports.list
-apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 8B48AD6246925553
-apt-key adv --recv-keys --keyserver keyserver.ubuntu.com 7638D0442B90D010
-
-# install ansible
-## ppa
-echo "deb http://ppa.launchpad.net/ansible/ansible/ubuntu trusty main" | tee /etc/apt/sources.list.d/ansible.list
-apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 93C4A3FD7BB9C367
+# RDBOX ################################################
+# install backport
+get_gpg A1BD8E9D78F7FE5C3E65D8AF8B48AD6246925553 https://ftp-master.debian.org/keys/archive-key-7.0.asc
+get_gpg 126C0D24BD8A2942CC7DF8AC7638D0442B90D010 https://ftp-master.debian.org/keys/archive-key-8.asc
+get_gpg D21169141CECD440F2EB8DDA9D6D8F6BC857C906 https://ftp-master.debian.org/keys/archive-key-8-security.asc
+get_gpg E1CF20DDFFE4B89E802658F1E0B11894F66AEC98 https://ftp-master.debian.org/keys/archive-key-9.asc
+get_gpg 6ED6F5CB5FA6FB2F460AE88EEDA0D2388AE22BA9 https://ftp-master.debian.org/keys/archive-key-9-security.asc
+echo "deb http://ftp.`curl -s ipinfo.io/52.193.175.205/country | tr "[:upper:]" "[:lower:]"`.debian.org/debian stretch-backports main contrib non-free" | tee /etc/apt/sources.list.d/stretch-backports.list
 
 # install kubeadmn
-## ppa
 curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | apt-key add -
 cat <<EOF >/etc/apt/sources.list.d/kubernetes.list
 deb http://apt.kubernetes.io/ kubernetes-xenial main
 EOF
+################################################ RDBOX #
 
 # reload package sources
 apt-get update
@@ -144,34 +139,44 @@ apt-get install -y \
   firmware-atheros \
   firmware-brcm80211 \
   firmware-libertas \
-  firmware-ralink \
+  firmware-misc-nonfree \
   firmware-realtek
 
 # install kernel- and firmware-packages
 apt-get install -y \
   --no-install-recommends \
-  "raspberrypi-kernel=${KERNEL_BUILD}" \
-  "raspberrypi-bootloader=${KERNEL_BUILD}" \
-  "libraspberrypi0=${KERNEL_BUILD}" \
-  "libraspberrypi-dev=${KERNEL_BUILD}" \
-  "libraspberrypi-bin=${KERNEL_BUILD}"
+  raspberrypi-bootloader \
+  libraspberrypi0 \
+  libraspberrypi-bin \
+  raspi-config
+
+# install special Docker enabled kernel
+if [ -z "${KERNEL_URL}" ]; then
+  apt-get install -y \
+    --no-install-recommends \
+    "raspberrypi-kernel=${KERNEL_BUILD}"
+else
+  curl -L -o /tmp/kernel.deb "${KERNEL_URL}"
+  dpkg -i /tmp/kernel.deb
+  rm /tmp/kernel.deb
+fi
 
 # enable serial console
 printf "# Spawn a getty on Raspberry Pi serial line\nT0:23:respawn:/sbin/getty -L ttyAMA0 115200 vt100\n" >> /etc/inittab
 
 # boot/cmdline.txt
-echo "+dwc_otg.lpm_enable=0 console=tty1 root=/dev/mmcblk0p2 rootfstype=ext4 cgroup_enable=cpuset cgroup_enable=memory swapaccount=1 elevator=deadline fsck.repair=yes rootwait console=ttyAMA0,115200 kgdboc=ttyAMA0,115200" > /boot/cmdline.txt
+echo "dwc_otg.lpm_enable=0 console=serial0,115200 console=tty1 root=/dev/mmcblk0p2 rootfstype=ext4 cgroup_enable=cpuset cgroup_enable=memory swapaccount=1 elevator=deadline fsck.repair=yes rootwait quiet init=/usr/lib/raspi-config/init_resize.sh" > /boot/cmdline.txt
 
 # create a default boot/config.txt file (details see http://elinux.org/RPiconfig)
 echo "
 hdmi_force_hotplug=1
-enable_uart=1
+enable_uart=0
 " > boot/config.txt
 
 echo "# camera settings, see http://elinux.org/RPiconfig#Camera
-start_x=1
+start_x=0
 disable_camera_led=1
-gpu_mem=128
+gpu_mem=16
 " >> boot/config.txt
 
 # /etc/modules
@@ -195,29 +200,34 @@ apt-get install -y \
   --no-install-recommends \
   wpasupplicant \
   wireless-tools \
-  ethtool \
-  crda
+  crda \
+  raspberrypi-net-mods
 
 # add firmware and packages for managing bluetooth devices
 apt-get install -y \
   --no-install-recommends \
-  bluetooth \
   pi-bluetooth
 
 # ensure compatibility with Docker install.sh, so `raspbian` will be detected correctly
 apt-get install -y \
   --no-install-recommends \
-  lsb-release
+  lsb-release \
+  gettext
 
 # install cloud-init
-apt-get -t jessie-backports install -y \
-  cloud-init
 apt-get install -y \
-  debian-keyring \
-  debian-archive-keyring
+  cloud-init
+
+# Fix cloud-init package mirrors
+sed -i '/disable_root: true/a apt_preserve_sources_list: true' /etc/cloud/cloud.cfg
+
+# Link cloud-init config to VFAT /boot partition
 mkdir -p /var/lib/cloud/seed/nocloud-net
 ln -s /boot/user-data /var/lib/cloud/seed/nocloud-net/user-data
 ln -s /boot/meta-data /var/lib/cloud/seed/nocloud-net/meta-data
+
+# Fix duplicate IP address for eth0, remove file from os-rootfs
+rm -f /etc/network/interfaces.d/eth0
 
 # install docker-machine
 curl -sSL -o /usr/local/bin/docker-machine "https://github.com/docker/machine/releases/download/v${DOCKER_MACHINE_VERSION}/docker-machine-Linux-armhf"
@@ -229,7 +239,8 @@ curl -sSL "https://raw.githubusercontent.com/docker/machine/v${DOCKER_MACHINE_VE
 # install docker-compose
 apt-get install -y \
   --no-install-recommends \
-  python-pip
+  python
+curl -sSL https://bootstrap.pypa.io/get-pip.py | python
 pip install "docker-compose==${DOCKER_COMPOSE_VERSION}"
 
 # install bash completion for Docker Compose
@@ -237,94 +248,50 @@ curl -sSL "https://raw.githubusercontent.com/docker/compose/${DOCKER_COMPOSE_VER
 
 # install docker-ce (w/ install-recommends)
 apt-get install -y --force-yes \
+  --no-install-recommends \
   "docker-ce=${DOCKER_CE_VERSION}"
+
+# install bash completion for Docker CLI
+curl -sSL https://raw.githubusercontent.com/docker/docker-ce/master/components/cli/contrib/completion/bash/docker -o /etc/bash_completion.d/docker
 
 echo "Installing rpi-serial-console script"
 wget -q https://raw.githubusercontent.com/lurch/rpi-serial-console/master/rpi-serial-console -O usr/local/bin/rpi-serial-console
 chmod +x usr/local/bin/rpi-serial-console
 
-# rtl8812au compliant
-## add kernel headers
-apt-get install -y \
-  jq \
-  linux-headers-${KERNEL_VERSION}-hypriotos-v7+ \
-  build-essential
-wget -q https://raw.githubusercontent.com/armbian/build/next/patch/headers-debian-byteshift.patch -P /tmp
-patch -d /usr/src/linux-headers-${KERNEL_VERSION}-hypriotos-v7+ -p1 < /tmp/headers-debian-byteshift.patch
-make -j`grep -c ^processor /proc/cpuinfo | tr -d '\n'` -C /usr/src/linux-headers-${KERNEL_VERSION}-hypriotos-v7+ scripts
 
-# rtl8812au compliant
-## add dmks driver
-RTL8812AU_SITE=mk-fg/rtl8812au
-RTL8812AU_COMMIT_VER=`curl -qsS https://api.github.com/repos/$RTL8812AU_SITE/commits | jq .[0].sha | sed 's/"//g' | cut -c 1-8 | tr -d '\n'`
-RTL8812AU_STR_VER=`curl -qsS https://raw.githubusercontent.com/$RTL8812AU_SITE/master/README.rst | grep -A 1 -B 1 "which is based on " | tr -d '\n' |sed -e 's/^.*on \([0-9０-９.]*\).*$/\1/' | tr -d '\n'`
-apt-get install -y \
-  git \
-  bc \
-  unzip \
-  dkms
-wget -q https://github.com/$RTL8812AU_SITE/archive/master.zip -P /tmp
-unzip /tmp/master.zip -d /tmp
-sed -i -e "s/^ARCH ?= arm64$/ARCH ?= arm/g" /tmp/rtl8812au-master/Makefile
-sed -i -e "s/^CONFIG_RTW_DEBUG = y$/CONFIG_RTW_DEBUG = n/g" /tmp/rtl8812au-master/Makefile
-sed -i -e "s/^CONFIG_RTW_LOG_LEVEL = 4$/CONFIG_RTW_LOG_LEVEL = 0/g" /tmp/rtl8812au-master/Makefile
-mv /tmp/rtl8812au-master /usr/src/rtl8812au-$RTL8812AU_STR_VER.$RTL8812AU_COMMIT_VER
-dkms add -m rtl8812au -v $RTL8812AU_STR_VER.$RTL8812AU_COMMIT_VER -c /usr/src/rtl8812au-$RTL8812AU_STR_VER.$RTL8812AU_COMMIT_VER/dkms.conf -k ${KERNEL_VERSION}-hypriotos-v7+
-dkms build -m rtl8812au -v $RTL8812AU_STR_VER.$RTL8812AU_COMMIT_VER -c /usr/src/rtl8812au-$RTL8812AU_STR_VER.$RTL8812AU_COMMIT_VER/dkms.conf -k ${KERNEL_VERSION}-hypriotos-v7+
-dkms install -m rtl8812au -v $RTL8812AU_STR_VER.$RTL8812AU_COMMIT_VER -c /usr/src/rtl8812au-$RTL8812AU_STR_VER.$RTL8812AU_COMMIT_VER/dkms.conf -k ${KERNEL_VERSION}-hypriotos-v7+
 
+# RDBOX ##################################################
+apt-get install -y \
+  gdebi
+## hostapd
+gdebi -n `ls /tmp/deb-files/*.deb | grep hostapd | grep -v dbgsym | sort -r | head -1`
+## rdbox
+gdebi -n `ls /tmp/deb-files/*.deb | grep rdbox | grep -v dbgsym | sort -r | head -1`
+systemctl disable rdbox-boot.service
 
 # Built in WiFi
 ## enable udev/rules.d
-sed -i '/^KERNEL!="ath/c KERNEL!="ath*|msh*|ra*|sta*|ctc*|lcs*|hsi*|eth*|wlan*", \\' /etc/udev/rules.d/75-persistent-net-generator.rules
-cp /etc/rdbox/networks/70-persistent-net.rules /etc/udev/rules.d/70-persistent-net.rules
+echo sed -i '/^KERNEL!="ath/c KERNEL!="ath*|msh*|ra*|sta*|ctc*|lcs*|hsi*|eth*|wlan*", \\' /etc/udev/rules.d/75-persistent-net-generator.rules
 
-# install ansible
-## apt-get
-apt-get install -y \
-  ansible
+## suppress NIC barrel
+echo '# This file was automatically generated by the /lib/udev/write_net_rules
+# program, run by the persistent-net-generator.rules rules file.
+#
+# You can modify it, as long as you keep each rule on a single
+# line, and change only the value of the NAME= key.
+# USB device 0x:0x (smsc95xx)
+SUBSYSTEM=="net", ACTION=="add", DRIVERS=="?*", ATTR{address}=="b8:27:eb:??:??:??", ATTR{dev_id}=="0x0", ATTR{type}=="1", KERNEL=="eth*", NAME="eth0"
+
+# Unknown net device (/devices/platform/soc/3f300000.mmc/mmc_host/mmc1/mmc1:0001/mmc1:0001:1/net/wlan0) (brcmfmac_sdio)
+SUBSYSTEM=="net", ACTION=="add", DRIVERS=="?*", ATTR{address}=="b8:27:eb:??:??:??", ATTR{dev_id}=="0x0", ATTR{type}=="1", KERNEL=="wlan*", NAME="wlan10"
+' > /etc/udev/rules.d/70-persistent-net.rules
 
 # Multi-hop Wi-Fi
 ## bridge and batman
 apt-get install -y \
   bridge-utils \
-  batctl \
-  git
+  batctl
 echo "batman-adv" >> /etc/modules
-## hostapd
-apt-get install -y \
-  libnl-dev
-apt-get install -y \
-  libnl-3-dev \
-  libnl-genl-3-dev \
-  libssl-dev \
-  pkg-config \
-  git
-apt-get install -y \
-  binutils-dev \
-  libiberty-dev
-apt-get install -y \
-  hostapd
-wget -q http://blog.fraggod.net/misc/hostapd-2.6-no-bss-conflicts.patch -P /tmp
-wget -q https://w1.fi/releases/hostapd-${HOSTAPD_VERSION}.tar.gz -P /tmp
-tar xvzf /tmp/hostapd-${HOSTAPD_VERSION}.tar.gz -C /usr/local/src
-patch -d /usr/local/src/hostapd-${HOSTAPD_VERSION} -p1 < /tmp/hostapd-2.6-no-bss-conflicts.patch
-cp -rf /usr/local/src/hostapd-${HOSTAPD_VERSION}/hostapd/defconfig /usr/local/src/hostapd-${HOSTAPD_VERSION}/hostapd/.config
-echo CONFIG_LIBNL32=y >> /usr/local/src/hostapd-${HOSTAPD_VERSION}/hostapd/.config
-echo CONFIG_IEEE80211N=y >> /usr/local/src/hostapd-${HOSTAPD_VERSION}/hostapd/.config
-echo CONFIG_IEEE80211AC=y >> /usr/local/src/hostapd-${HOSTAPD_VERSION}/hostapd/.config
-echo CONFIG_ACS=y >> /usr/local/src/hostapd-${HOSTAPD_VERSION}/hostapd/.config
-echo CONFIG_WPS=y >> /usr/local/src/hostapd-${HOSTAPD_VERSION}/hostapd/.config
-echo CONFIG_EAP_PSK=y >> /usr/local/src/hostapd-${HOSTAPD_VERSION}/hostapd/.config
-echo CONFIG_WPA_TRACE=y >> /usr/local/src/hostapd-${HOSTAPD_VERSION}/hostapd/.config
-echo CONFIG_WPA_TRACE_BFD=y >> /usr/local/src/hostapd-${HOSTAPD_VERSION}/hostapd/.config
-echo CONFIG_EAP_GPSK=y >> /usr/local/src/hostapd-${HOSTAPD_VERSION}/hostapd/.config
-echo CONFIG_EAP_GPSK_SHA256=y >> /usr/local/src/hostapd-${HOSTAPD_VERSION}/hostapd/.config
-make -j`grep -c ^processor /proc/cpuinfo | tr -d '\n'` -C /usr/local/src/hostapd-${HOSTAPD_VERSION}/hostapd/
-cp -rf /usr/local/src/hostapd-${HOSTAPD_VERSION}/hostapd/hostapd /usr/sbin/hostapd
-cp -rf /usr/local/src/hostapd-${HOSTAPD_VERSION}/hostapd/hostapd_cli /usr/sbin/hostapd_cli
-update-rc.d hostapd remove
-#make -C /usr/local/src/hostapd-${HOSTAPD_VERSION}/hostapd/ install
 
 # install kubeadmn
 ## apt-get
@@ -337,8 +304,8 @@ apt-get install -y \
 
 # Security settings
 ## /etc/ssh/sshd_config
-sed -i '/^Port 22$/c Port 12810' /etc/ssh/sshd_config
-sed -i '/^LoginGraceTime 120$/c LoginGraceTime 15' /etc/ssh/sshd_config
+sed -i '/^#Port 22$/c Port 12810' /etc/ssh/sshd_config
+sed -i '/^#LoginGraceTime 2m$/c LoginGraceTime 15' /etc/ssh/sshd_config
 #sed -i '/^#PasswordAuthentication yes$/c PasswordAuthentication no' /etc/ssh/sshd_config
 echo "MaxAuthTries 2" >> /etc/ssh/sshd_config
 
@@ -352,35 +319,73 @@ locale-gen
 
 # Network settings
 ## /etc/sysctl.conf
-echo "net.ipv4.conf.all.forwarding = 1" >> /etc/sysctl.conf
-echo "net.ipv4.conf.default.forwarding = 1" >> /etc/sysctl.conf
-echo "net.ipv4.ip_forward = 1" >> /etc/sysctl.conf
-echo "net.ipv6.conf.all.forwarding = 1" >> /etc/sysctl.conf
-echo "net.ipv6.conf.default.forwarding = 1" >> /etc/sysctl.conf
-## /etc/wpa_supplicant/wpa_supplicant.conf
-cp /etc/rdbox/networks/wpa_supplicant.conf /etc/wpa_supplicant/wpa_supplicant.conf
-## /etc/hosts
-cp /etc/rdbox/networks/hosts.debian.tmpl /etc/cloud/templates/hosts.debian.tmpl
-## /etc/hostapd/hostapd.conf
-cp /etc/rdbox/networks/hostapd/hostapd_be.conf /etc/hostapd/hostapd_be.conf
-cp /etc/rdbox/networks/hostapd/hostapd_ap_ac.conf /etc/hostapd/hostapd_ap_ac.conf
+echo '
+net.ipv4.conf.all.forwarding = 1
+net.ipv4.conf.default.forwarding = 1
+net.ipv4.ip_forward = 1
+net.ipv6.conf.all.forwarding = 1
+net.ipv6.conf.default.forwarding = 1
+' >> /etc/sysctl.conf
+
+# install ansible
+## apt-get
+apt-get -t stretch-backports install -y \
+  ansible
 
 # deprecated
 # It will run on Docker.
 ## dnsmasq
 apt-get install -y \
-  dnsmasq
-echo ""
-echo ""
-echo "no-dhcp-interface=eth0,wlan0,wlan1,wlan2,wlan3,wlan4" >> /etc/dnsmasq.conf
-echo "listen-address=127.0.0.1,192.168.179.1" >> /etc/dnsmasq.conf
-echo "interface=br0" >> /etc/dnsmasq.conf
-echo "dhcp-leasefile=/etc/rdbox/share/dnsmasq.leases" >> /etc/dnsmasq.conf
-echo "dhcp-hostsfile=/etc/rdbox/share/dnsmasq.hosts.conf" >> /etc/dnsmasq.conf
-echo "dhcp-range=192.168.179.2,192.168.179.254,255.255.255.0,12h" >> /etc/dnsmasq.conf
-echo "dhcp-option=option:router,192.168.179.1" >> /etc/dnsmasq.conf
-echo "dhcp-option=option:dns-server,192.168.179.1,8.8.8.8,8.8.4.4" >> /etc/dnsmasq.conf
-echo "dhcp-option=option:ntp-server,192.168.179.1" >> /etc/dnsmasq.conf
+  dnsmasq \
+  resolvconf
+systemctl disable dnsmasq.service
+echo 'no-dhcp-interface=eth0,wlan0,wlan1,wlan2,wlan3,wlan4
+listen-address=127.0.0.1,192.168.179.1
+interface=br0
+dhcp-leasefile=/etc/rdbox/dnsmasq.leases
+dhcp-hostsfile=/etc/rdbox/dnsmasq.hosts.conf
+dhcp-range=192.168.179.2,192.168.179.254,255.255.255.0,12h
+dhcp-option=option:router,192.168.179.1
+dhcp-option=option:dns-server,192.168.179.1,8.8.8.8,8.8.4.4
+dhcp-option=option:ntp-server,192.168.179.1
+' > /etc/dnsmasq.conf
+
+echo '## template:jinja
+{#
+This file (/etc/cloud/templates/hosts.tmpl) is only utilized
+if enabled in cloud-config.  Specifically, in order to enable it
+you need to add the following to config:
+  manage_etc_hosts: True
+-#}
+# Your system has configured 'manage_etc_hosts' as True.
+# As a result, if you wish for changes to this file to persist
+# then you will need to either
+# a.) make changes to the master file in /etc/cloud/templates/hosts.tmpl
+# b.) change or remove the value of 'manage_etc_hosts' in
+#     /etc/cloud/cloud.cfg or cloud-config from user-data
+#
+{# The value '{{hostname}}' will be replaced with the local-hostname -#}
+192.168.179.1 rdbox-master-00.localdomain rdbox-master-00
+127.0.1.1 {{fqdn}} {{hostname}}
+127.0.0.1 localhost
+
+# The following lines are desirable for IPv6 capable hosts
+::1 ip6-localhost ip6-loopback
+fe00::0 ip6-localnet
+ff00::0 ip6-mcastprefix
+ff02::1 ip6-allnodes
+ff02::2 ip6-allrouters
+ff02::3 ip6-allhosts
+' > /etc/cloud/templates/hosts.debian.tmpl
+################################################ RDBOX #
+
+
+
+
+
+
+# fix eth0 interface name
+ln -s /dev/null /etc/systemd/network/99-default.link
 
 # cleanup APT cache and lists
 apt-get clean

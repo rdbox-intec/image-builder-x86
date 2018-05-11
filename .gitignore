@@ -3,3 +3,6 @@
 *.img.zip
 *.tar.gz
 .vagrant/
+
+*.deb
+*.log

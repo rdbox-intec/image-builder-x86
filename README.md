@@ -1,16 +1,19 @@
 # image-builder-rpi
+
 [![Join the chat at https://gitter.im/hypriot/talk](https://badges.gitter.im/hypriot/talk.svg)](https://gitter.im/hypriot/talk?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
-[![Build Status](https://travis-ci.org/hypriot/image-builder-rpi.svg)](https://travis-ci.org/hypriot/image-builder-rpi)
+[![Build Status](https://circleci.com/gh/hypriot/image-builder-rpi.svg?style=svg)](https://circleci.com/gh/hypriot/image-builder-rpi)
+[![Latest Release](https://img.shields.io/github/downloads/hypriot/image-builder-rpi/v1.8.0/total.svg)](https://github.com/hypriot/image-builder-rpi/releases/tag/v1.8.0)
+[![All Releases](https://img.shields.io/github/downloads/hypriot/image-builder-rpi/total.svg)](https://github.com/hypriot/image-builder-rpi/releases)
 
 This repo builds the SD card image with HypriotOS for the Raspberry Pi 1, 2, 3
 and Zero. You can find released versions of the SD card image here in the GitHub
 releases page. To build this SD card image we have to
 
- * take the files for the root filesystem from [`os-rootfs`](https://github.com/hypriot/os-rootfs)
- * take the empty raw filesystem from [`image-builder-raw`](https://github.com/hypriot/image-builder-raw) with the two partitions
- * add Hypriot's Debian repos
- * install the Raspberry Pi kernel from [`rpi-kernel`](https://github.com/hypriot/rpi-kernel)
- * install Docker tools Docker Engine, Docker Compose and Docker Machine
+* take the files for the root filesystem from [`os-rootfs`](https://github.com/hypriot/os-rootfs)
+* take the empty raw filesystem from [`image-builder-raw`](https://github.com/hypriot/image-builder-raw) with the two partitions
+* add Hypriot's Debian repos
+* install the Raspberry Pi kernel from [`rpi-kernel`](https://github.com/hypriot/rpi-kernel)
+* install Docker tools Docker Engine, Docker Compose and Docker Machine
 
 Here is an example how all the GitHub repos play together:
 
@@ -25,20 +28,28 @@ You can build the SD card image locally with Vagrant.
 
 ### Setting up build environment
 
-Make sure you have [vagrant](https://docs.vagrantup.com/v2/installation/) and [docker-machine](https://docs.docker.com/machine/install-machine/) installed.
-Then run the following command to create the Vagrant box and the Docker Machine
-connection. The Vagrant box is needed as a vanilla boot2docker VM is not able to
-run guestfish inside. Use `export VAGRANT_DEFAULT_PROVIDER=virtualbox` to
-strictly create a VirtualBox VM.
+Make sure you have [vagrant](https://docs.vagrantup.com/v2/installation/) installed.
+Then run the following command to create the Vagrant box and use the Vagrant Docker
+daemon. The Vagrant box is needed to run guestfish inside.
+Use `export VAGRANT_DEFAULT_PROVIDER=virtualbox` to strictly create a VirtualBox VM.
+
+Start vagrant box
 
 ```bash
-make docker-machine
+vagrant up
 ```
 
-Now set the Docker environments to this new docker machine:
+Export docker host
 
 ```bash
-eval $(docker-machine env image-builder-rpi)
+export DOCKER_HOST=tcp://127.0.0.1:2375
+```
+
+Check you are using docker from inside vagrant
+
+```bash
+docker info | grep 'Operating System'
+Operating System: Ubuntu 16.04.3 LTS
 ```
 
 ### Build the SD card image
