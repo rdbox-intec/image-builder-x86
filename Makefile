@@ -30,6 +30,7 @@ tag:
 	git push origin ${TAG}
 
 
+# RDBOX #################################################
 clean:
 	rm -rf *.log
 	rm -rf *.img.zip
@@ -38,3 +39,8 @@ clean:
 	rm -rf rpi-raw.img.zip
 	rm -rf builder/files/tmp/deb-files/*
 
+sd-image-rdbox: build
+	docker run --rm --privileged -v $(shell pwd):/workspace -v /boot:/boot -v /lib/modules:/lib/modules -e CIRCLE_TAG -e VERSION image-builder-rpi /builder/build.sh rdbox
+
+sd-image-turtlebot3: build
+	docker run --rm --privileged -v $(shell pwd):/workspace -v /boot:/boot -v /lib/modules:/lib/modules -e CIRCLE_TAG -e VERSION image-builder-rpi /builder/build.sh with_tb3

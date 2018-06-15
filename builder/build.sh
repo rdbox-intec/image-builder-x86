@@ -25,9 +25,16 @@ ROOTFS_TAR_PATH="${BUILD_RESULT_PATH}/${ROOTFS_TAR}"
 echo CIRCLE_TAG="${CIRCLE_TAG}"
 
 # name of the sd-image we gonna create
+if [ $1 = "rdbox" ]; then
+  VERSION=${VERSION}
+else
+  VERSION=${VERSION}_$1
+fi
 HYPRIOT_IMAGE_VERSION=${VERSION:="dirty"}
 HYPRIOT_IMAGE_NAME="hypriotos-rpi-${HYPRIOT_IMAGE_VERSION}.img"
 export HYPRIOT_IMAGE_VERSION
+
+unzip -p "${BUILD_RESULT_PATH}/${RAW_IMAGE}" > "/${HYPRIOT_IMAGE_NAME}"
 
 # create build directory for assembling our image filesystem
 rm -rf ${BUILD_PATH}
@@ -63,7 +70,7 @@ cp -R /builder/files/* ${BUILD_PATH}/
 # make our build directory the current root
 # and install the Rasberry Pi firmware, kernel packages,
 # docker tools and some customizations
-chroot ${BUILD_PATH} /bin/bash < /builder/chroot-script.sh
+EDITION=$1 chroot ${BUILD_PATH} /bin/bash < /builder/chroot-script.sh
 
 # unmount pseudo filesystems
 umount -l ${BUILD_PATH}/dev/pts
@@ -90,10 +97,9 @@ ls -alh /image_with_kernel_*.tar.gz
 # verify checksum of the ready-made raw image
 #echo "${RAW_IMAGE_CHECKSUM} ${BUILD_RESULT_PATH}/${RAW_IMAGE}.zip" | sha256sum -c -
 
-unzip -p "${BUILD_RESULT_PATH}/${RAW_IMAGE}" > "/${HYPRIOT_IMAGE_NAME}"
 
 # create the image and add root base filesystem
-guestfish -a "/${HYPRIOT_IMAGE_NAME}"<<_EOF_
+guestfish -v -a "/${HYPRIOT_IMAGE_NAME}"<<_EOF_
   run
   #import filesystem content
   mount /dev/sda2 /
@@ -111,4 +117,4 @@ zip "${BUILD_RESULT_PATH}/${HYPRIOT_IMAGE_NAME}.zip" "${HYPRIOT_IMAGE_NAME}"
 cd ${BUILD_RESULT_PATH} && sha256sum "${HYPRIOT_IMAGE_NAME}.zip" > "${HYPRIOT_IMAGE_NAME}.zip.sha256" && cd -
 
 # test sd-image that we have built
-VERSION=${HYPRIOT_IMAGE_VERSION} rspec --format documentation --color ${BUILD_RESULT_PATH}/builder/test
+VERSION=${HYPRIOT_IMAGE_VERSION} rspec --format documentation --color ${BUILD_RESULT_PATH}/builder/test > ${BUILD_RESULT_PATH}/testresult.log
