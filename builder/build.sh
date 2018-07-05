@@ -25,7 +25,7 @@ ROOTFS_TAR_PATH="${BUILD_RESULT_PATH}/${ROOTFS_TAR}"
 echo CIRCLE_TAG="${CIRCLE_TAG}"
 
 # name of the sd-image we gonna create
-if [ $1 = "rdbox" ]; then
+if [ "$1" = "rdbox" ]; then
   VERSION=${VERSION}
 else
   VERSION=${VERSION}_$1
