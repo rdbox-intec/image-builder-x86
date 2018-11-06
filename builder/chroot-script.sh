@@ -99,7 +99,7 @@ PACKAGECLOUD_FPR=418A7F2FB0E1E6E7EABF6FE8C2E73424D59097AB
 PACKAGECLOUD_KEY_URL=https://packagecloud.io/gpg.key
 get_gpg "${PACKAGECLOUD_FPR}" "${PACKAGECLOUD_KEY_URL}"
 
-echo 'deb https://packagecloud.io/Hypriot/rpi/debian/ stretch main' > /etc/apt/sources.list.d/hypriot.list
+echo 'deb https://packagecloud.io/Hypriot/rpi/debian stretch main' > /etc/apt/sources.list.d/hypriot.list
 
 # set up Docker CE repository
 DOCKERREPO_FPR=9DC858229FC7DD38854AE2D88D81803C0EBFCD88
@@ -113,10 +113,11 @@ echo "deb [arch=armhf] https://download.docker.com/linux/raspbian stretch $CHANN
 RPI_ORG_FPR=CF8A1AF502A2AA2D763BAE7E82B129927FA3303E RPI_ORG_KEY_URL=http://archive.raspberrypi.org/debian/raspberrypi.gpg.key
 get_gpg "${RPI_ORG_FPR}" "${RPI_ORG_KEY_URL}"
 
-#echo 'deb http://archive.raspberrypi.org/debian/ stretch main' | tee /etc/apt/sources.list.d/raspberrypi.list
-rm -rf /etc/apt/source.list
+#rm -rf /etc/apt/sources.list
 echo 'deb http://ftp.jaist.ac.jp/raspbian/ stretch main contrib non-free rpi' >> /etc/apt/sources.list.d/raspberrypi.list
 echo 'deb http://mirrors.ustc.edu.cn/archive.raspberrypi.org/debian/ stretch main ui' >> /etc/apt/sources.list.d/raspberrypi.list
+#echo 'deb http://archive.raspberrypi.org/debian/ stretch main ui' >> tee /etc/apt/sources.list.d/raspberrypi.list
+#echo 'deb http://raspbian.raspberrypi.org/raspbian/ stretch main contrib non-free rpi' >> /etc/apt/sources.list.d/raspberrypi.list
 
 # RDBOX ################################################
 # install backport
@@ -324,7 +325,7 @@ apt-get install -y \
 # Security settings
 ## /etc/ssh/sshd_config
 sed -i '/^#Port 22$/c Port 12810' /etc/ssh/sshd_config
-sed -i '/^#LoginGraceTime 2m$/c LoginGraceTime 15' /etc/ssh/sshd_config
+sed -i '/^#LoginGraceTime 2m$/c LoginGraceTime 10' /etc/ssh/sshd_config
 #sed -i '/^#PasswordAuthentication yes$/c PasswordAuthentication no' /etc/ssh/sshd_config
 echo "MaxAuthTries 2" >> /etc/ssh/sshd_config
 
@@ -344,6 +345,8 @@ net.ipv4.conf.default.forwarding = 1
 net.ipv4.ip_forward = 1
 net.ipv6.conf.all.forwarding = 1
 net.ipv6.conf.default.forwarding = 1
+net.ipv6.conf.all.disable_ipv6 = 1
+net.ipv6.conf.default.disable_ipv6 = 1
 ' >> /etc/sysctl.conf
 
 
@@ -354,12 +357,12 @@ apt-get install -y \
   dnsmasq \
   resolvconf
 systemctl disable dnsmasq.service
-echo 'no-dhcp-interface=eth0,wlan0,wlan1,wlan2,wlan3
-listen-address=127.0.0.1,192.168.179.1
+echo '
+listen-address=192.168.179.1
 interface=br0
 dhcp-leasefile=/etc/rdbox/dnsmasq.leases
 dhcp-hostsfile=/etc/rdbox/dnsmasq.hosts.conf
-dhcp-range=192.168.179.11,192.168.179.254,255.255.255.0,12h
+dhcp-range=192.168.179.11,192.168.179.254,255.255.255.0,30d
 dhcp-option=option:router,192.168.179.1
 dhcp-option=option:dns-server,192.168.179.1,8.8.8.8,8.8.4.4
 dhcp-option=option:ntp-server,192.168.179.1
@@ -399,12 +402,19 @@ apt-get install -y \
   unattended-upgrades
 echo -e "APT::Periodic::Update-Package-Lists \"1\";\nAPT::Periodic::Unattended-Upgrade \"1\";\n" > /etc/apt/apt.conf.d/20auto-upgrades
 echo -e "Unattended-Upgrade::Origins-Pattern {
-  'origin=Raspbian,archive=stable';
+  origin=Raspbian,label=Raspbian;
+  origin=Debian,label=Debian-Security;
+  origin="Raspberry Pi Foundation",label="Raspberry Pi Foundation";
 };
 Unattended-Upgrade::Remove-Unused-Dependencies "true";
 Unattended-Upgrade::Automatic-Reboot 'false';
 " > /etc/apt/apt.conf.d/50unattended-upgrades
 
+# install NFS
+apt-get install -y \
+  nfs-kernel-server \
+  nfs-common
+sudo systemctl disable nfs-kernel-server.service
 
 # install ROS
 echo "disable-ipv6" > ~/.gnupg/dirmngr.conf
@@ -414,6 +424,11 @@ apt-get install -y \
 sleep 20
 apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-key 421C365BD9FF1F717815A3895523BAEEB01FA116
 sh -c 'echo "deb http://packages.ros.org/ros/ubuntu $(lsb_release -sc) main" > /etc/apt/sources.list.d/ros-latest.list'
+echo '
+Package: *
+Pin: origin packages.ros.org
+Pin-Priority: 1001
+' > /etc/apt/preferences.d/ros-latest
 apt-get update
 
 apt-get install -y \
@@ -421,6 +436,10 @@ apt-get install -y \
   python-rosinstall-generator \
   python-wstool \
   python-rosinstall \
+  python-catkin-pkg \
+  python-catkin-pkg \
+  python-catkin-pkg-modules \
+  python-catkin-tools \
   build-essential
 
 if [ $EDITION = "with_tb3" ]; then
@@ -476,6 +495,7 @@ if [ $EDITION = "with_tb3" ]; then
   wstool rm pcl_msgs
   wstool rm perception_pcl/pcl_ros
   wstool rm perception_pcl/perception_pcl
+  wstool rm metapackages/perception
 fi
 
 wstool init -j8 src .rosinstall
@@ -496,12 +516,10 @@ rosdep install --from-paths src --ignore-src --rosdistro kinetic -y --os=debian:
 mkdir -p /opt/ros/kinetic
 ./src/catkin/bin/catkin_make_isolated -j4 -l4 --install --no-color --install-space /opt/ros/kinetic -DCMAKE_BUILD_TYPE=Release 
 
-if [ $EDITION = "with_tb3" ]; then
-  echo 'ATTRS{idVendor}=="0483" ATTRS{idProduct}=="5740", ENV{ID_MM_DEVICE_IGNORE}="1", MODE:="0666"' >> /etc/udev/rules.d/99-turtlebot3-cdc.rules
-  echo 'ATTRS{idVendor}=="0483" ATTRS{idProduct}=="df11", MODE:="0666"' >> /etc/udev/rules.d/99-turtlebot3-cdc.rules
-  echo 'ATTRS{idVendor}=="fff1" ATTRS{idProduct}=="ff48", ENV{ID_MM_DEVICE_IGNORE}="1", MODE:="0666"' >> /etc/udev/rules.d/99-turtlebot3-cdc.rules
-  echo 'ATTRS{idVendor}=="10c4" ATTRS{idProduct}=="ea60", ENV{ID_MM_DEVICE_IGNORE}="1", MODE:="0666"' >> /etc/udev/rules.d/99-turtlebot3-cdc.rules
-fi
+echo 'ATTRS{idVendor}=="0483" ATTRS{idProduct}=="5740", ENV{ID_MM_DEVICE_IGNORE}="1", MODE:="0666"' >> /etc/udev/rules.d/99-turtlebot3-cdc.rules
+echo 'ATTRS{idVendor}=="0483" ATTRS{idProduct}=="df11", MODE:="0666"' >> /etc/udev/rules.d/99-turtlebot3-cdc.rules
+echo 'ATTRS{idVendor}=="fff1" ATTRS{idProduct}=="ff48", ENV{ID_MM_DEVICE_IGNORE}="1", MODE:="0666"' >> /etc/udev/rules.d/99-turtlebot3-cdc.rules
+echo 'ATTRS{idVendor}=="10c4" ATTRS{idProduct}=="ea60", ENV{ID_MM_DEVICE_IGNORE}="1", MODE:="0666"' >> /etc/udev/rules.d/99-turtlebot3-cdc.rules
 
 cd ~
 
