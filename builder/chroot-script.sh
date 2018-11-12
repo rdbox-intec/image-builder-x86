@@ -357,64 +357,162 @@ apt-get install -y \
   dnsmasq \
   resolvconf
 systemctl disable dnsmasq.service
-echo '
-listen-address=192.168.179.1
+echo 'no-dhcp-interface=eth0,wlan0,wlan1,wlan2,wlan3
+listen-address=127.0.0.1,192.168.179.1
 interface=br0
 dhcp-leasefile=/etc/rdbox/dnsmasq.leases
-dhcp-hostsfile=/etc/rdbox/dnsmasq.hosts.conf
+domain=rdbox.lan
+expand-hosts
+no-hosts
+addn-hosts=/etc/rdbox/dnsmasq.hosts.conf
 dhcp-range=192.168.179.11,192.168.179.254,255.255.255.0,30d
 dhcp-option=option:router,192.168.179.1
 dhcp-option=option:dns-server,192.168.179.1,8.8.8.8,8.8.4.4
 dhcp-option=option:ntp-server,192.168.179.1
+port=53
 ' > /etc/dnsmasq.conf
-
-echo '## template:jinja
-{#
-This file (/etc/cloud/templates/hosts.tmpl) is only utilized
-if enabled in cloud-config.  Specifically, in order to enable it
-you need to add the following to config:
-  manage_etc_hosts: True
--#}
-# Your system has configured 'manage_etc_hosts' as True.
-# As a result, if you wish for changes to this file to persist
-# then you will need to either
-# a.) make changes to the master file in /etc/cloud/templates/hosts.tmpl
-# b.) change or remove the value of 'manage_etc_hosts' in
-#     /etc/cloud/cloud.cfg or cloud-config from user-data
-#
-{# The value '{{hostname}}' will be replaced with the local-hostname -#}
-192.168.179.1 rdbox-master-00.{{fqdn}} rdbox-master-00
-192.168.179.2 rdbox-k8s-master.cloud.example.org rdbox-k8s-master
-127.0.0.1 localhost
-
-# The following lines are desirable for IPv6 capable hosts
-::1 ip6-localhost ip6-loopback
-fe00::0 ip6-localnet
-ff00::0 ip6-mcastprefix
-ff02::1 ip6-allnodes
-ff02::2 ip6-allrouters
-ff02::3 ip6-allhosts
-' > /etc/cloud/templates/hosts.debian.tmpl
-
+echo '192.168.179.1 rdbox-master-00 rdbox-master-00.rdbox.lan
+192.168.179.2 rdbox-k8s-master rdbox-k8s-master.rdbox.lan
+' > /etc/rdbox/dnsmasq.hosts.conf
 
 # enable auto update & upgrade
 apt-get install -y \
   unattended-upgrades
-echo -e "APT::Periodic::Update-Package-Lists \"1\";\nAPT::Periodic::Unattended-Upgrade \"1\";\n" > /etc/apt/apt.conf.d/20auto-upgrades
-echo -e "Unattended-Upgrade::Origins-Pattern {
+echo -e 'APT::Periodic::Update-Package-Lists "1";\nAPT::Periodic::Unattended-Upgrade "1";\n' > /etc/apt/apt.conf.d/20auto-upgrades
+echo -e 'Unattended-Upgrade::Origins-Pattern {
   origin=Raspbian,label=Raspbian;
   origin=Debian,label=Debian-Security;
   origin="Raspberry Pi Foundation",label="Raspberry Pi Foundation";
 };
 Unattended-Upgrade::Remove-Unused-Dependencies "true";
-Unattended-Upgrade::Automatic-Reboot 'false';
-" > /etc/apt/apt.conf.d/50unattended-upgrades
+Unattended-Upgrade::Automatic-Reboot "false";
+' > /etc/apt/apt.conf.d/50unattended-upgrades
 
 # install NFS
 apt-get install -y \
   nfs-kernel-server \
   nfs-common
 sudo systemctl disable nfs-kernel-server.service
+
+# install transproxy
+gdebi -n `ls /tmp/deb-files/*.deb | grep transproxy | grep -v dbgsym | sort -r | head -1`
+echo '# transproxy.conf
+# vim: syntax=toml
+# version: 0.0.1
+
+## Log level, one of: debug, info, warn, error, fatal, panic
+## default:info
+## type:string
+loglevel-local = "debug"
+
+## Private DNS address for no_proxy targets (IP[:port])
+## default:""(empty string)
+## type:string
+private-dns = ""
+
+## Public DNS address (IP[:port]) Note: Your proxy needs to support CONNECT method to the Public DNS port, and the public DNS needs to support TCP
+## default:""(empty string)
+## type:string
+public-dns = ""
+
+## TCP Proxy dports, as "port1,port2,..."
+## default:"22"
+## type:string
+tcp-proxy-dports = "22"
+
+## TCP Proxy listen address, as "[host]:port"
+## default:":3128"
+## type:string
+tcp-proxy-listen = ":3128"
+
+## HTTP Proxy listen addres, as "[host]:port"
+## default:":3129"
+## type:string
+http-proxy-listen = ":3129"
+
+## HTTPS Proxy listen addres, as "[host]:port"
+## default:":3130"
+## type:string
+https-proxy-listen = ":3130"
+
+## DNS Proxy listen addres, as "[host]:port"
+## default:":3130"
+## type:string
+dns-proxy-listen = ":3131"
+
+## Explicit Proxy listen address for HTTP/HTTPS, as [host]:port Note: This proxy doesnt use authentication info of the http_proxy and https_proxy environment variables
+## default:":3132"
+## type:string
+explicit-proxy-listen = ":3132"
+
+## Explicit Proxy with auth listen address for HTTP/HTTPS, as [host]:port Note: This proxy uses authentication info of the http_proxy and https_proxy environment variables
+## default:":3133"
+## type:string
+explicit-proxy-with-auth-listen = ":3133"
+
+## Boot Explicit Proxies only"
+## default:false
+## type:bool
+explicit-proxy-only = false
+
+## Disable DNS-over-TCP for querying to public DNS
+## default:false
+## type:bool
+dns-over-tcp-disabled = false
+
+## Use DNS-over-HTTPS service as public DNS
+## default:false
+## type:bool
+dns-over-https-enabled = true
+
+## DNS-over-HTTPS endpoint URL
+## default:"https://dns.google.com/resolve"
+## type:string
+dns-over-https-endpoint = "https://dns.google.com/resolve"
+
+## DNS Listen on TCP
+## default:true
+## type:bool
+dns-tcp = true
+
+## DNS Listen on UDP
+## default:true
+## type:bool
+dns-udp = true
+
+## Disable automatic iptables configuration
+## default:false
+## type:bool
+disable-iptables = false
+
+## If true, use the local DNS resolver preferentially. If unknown hostname, transproxy will process it. (local DNS resolver, dnsmasq, systemd-resolved.....)
+## default:false
+## type:bool
+prefer-local-dns-reolver = true
+
+## Set to true to execute a transparent proxy on each computer.
+## default:false
+## type:bool
+execute-standalone = true
+
+## Disable tcps transproxy.
+## default:false
+## type:bool
+disable-tcpproxy = true
+
+## Disable dnss transproxy.
+## default:false
+## type:bool
+disable-dnsproxy = false
+
+## Specify additional parameters.(etc. "-i eth0")
+## default:""(empty string)
+## type:string
+parameter-http-https-iptables = ""
+' > /etc/transproxy/transproxy.conf
+
+# disable dhcpcd
+systemctl disable dhcpcd.service
 
 # install ROS
 echo "disable-ipv6" > ~/.gnupg/dirmngr.conf
