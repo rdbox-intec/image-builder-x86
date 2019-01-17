@@ -16,8 +16,8 @@ Vagrant.configure(2) do |config|
 
   config.vm.provider "virtualbox" do |vb|
     # Customize the amount of memory on the VM:
-    vb.memory = "8192"
-    vb.cpus = 5
+    vb.memory = "6144"
+    vb.cpus = 3
   end
 
   config.vm.provision "shell", inline: <<-SHELL

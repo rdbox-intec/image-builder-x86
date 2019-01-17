@@ -127,15 +127,21 @@ get_gpg D21169141CECD440F2EB8DDA9D6D8F6BC857C906 https://ftp-master.debian.org/k
 get_gpg E1CF20DDFFE4B89E802658F1E0B11894F66AEC98 https://ftp-master.debian.org/keys/archive-key-9.asc
 get_gpg 6ED6F5CB5FA6FB2F460AE88EEDA0D2388AE22BA9 https://ftp-master.debian.org/keys/archive-key-9-security.asc
 echo "deb http://ftp.`curl -s ipinfo.io/52.193.175.205/country | tr "[:upper:]" "[:lower:]"`.debian.org/debian stretch-backports main contrib non-free" | tee /etc/apt/sources.list.d/stretch-backports.list
-#echo "deb http://ftp.`curl -s ipinfo.io/52.193.175.205/country | tr "[:upper:]" "[:lower:]"`.debian.org/debian sid main contrib non-free" | tee /etc/apt/sources.list.d/sid.list
+echo "deb http://ftp.`curl -s ipinfo.io/52.193.175.205/country | tr "[:upper:]" "[:lower:]"`.debian.org/debian sid main contrib non-free" | tee /etc/apt/sources.list.d/sid.list
 
-echo 'APT::Default-Release "stable";' > /etc/apt/apt.conf.d/90rdbox
+
+# install ansible
+echo 'deb http://ppa.launchpad.net/ansible/ansible/ubuntu trusty main' >> /etc/apt/sources.list.d/ansible.list
+apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 93C4A3FD7BB9C367
 
 # install kubeadmn
 curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | apt-key add -
 cat <<EOF >/etc/apt/sources.list.d/kubernetes.list
 deb http://apt.kubernetes.io/ kubernetes-xenial main
 EOF
+
+# In a normal installation, the stable package is used preferentially.
+echo 'APT::Default-Release "stable";' > /etc/apt/apt.conf.d/90rdbox
 ################################################ RDBOX #
 
 # reload package sources
@@ -366,6 +372,7 @@ domain=rdbox.lan
 expand-hosts
 no-hosts
 addn-hosts=/etc/rdbox/dnsmasq.hosts.conf
+addn-hosts=/etc/rdbox/dnsmasq.k8s_external_svc.hosts.conf
 dhcp-range=192.168.179.11,192.168.179.254,255.255.255.0,30d
 dhcp-option=option:router,192.168.179.1
 dhcp-option=option:dns-server,192.168.179.1,8.8.8.8,8.8.4.4
@@ -375,6 +382,8 @@ port=53
 echo '192.168.179.1 rdbox-master-00 rdbox-master-00.rdbox.lan
 192.168.179.2 rdbox-k8s-master rdbox-k8s-master.rdbox.lan
 ' > /etc/rdbox/dnsmasq.hosts.conf
+
+touch /etc/rdbox/dnsmasq.k8s_external_svc.hosts.conf
 
 # enable auto update & upgrade
 apt-get install -y \
@@ -512,6 +521,30 @@ disable-dnsproxy = false
 parameter-http-https-iptables = ""
 ' > /etc/transproxy/transproxy.conf
 
+# For ansible
+apt-get install -y -t trusty \
+  ansible
+
+# For Helm(k8s)
+apt-get install -y \
+  snapd
+snap install helm --classic
+ln -s /snap/bin/helm /usr/local/bin/helm
+
+# For Network Debug
+apt-get install -y \
+  dnsutils \
+  traceroute
+
+# For rdbox_cli
+apt-get install -y -t sid \
+  python3-cachetools \
+  python3-pyasn1-modules
+apt-get install -y \
+  python3-kubernetes
+apt-get install -y \
+  python3-crontab
+
 # disable dhcpcd
 systemctl disable dhcpcd.service
 
@@ -648,4 +681,12 @@ cp /etc/os-release /boot/os-release
 
 # RDBOX ##################################################
 sed -e "2 s/HypriotOS/RDBOX on HypriotOS/g" /etc/motd
+sed -i "/RDBOX/a \
+. \n \
+            .___. \n \
+           /___/| \n \
+           |   |/ \n \
+           .---.  \n \
+           RDBOX  \n \
+- A Robotics Developers BOX - " /etc/motd
 ################################################ RDBOX #
