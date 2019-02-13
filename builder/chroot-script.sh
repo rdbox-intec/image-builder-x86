@@ -105,10 +105,10 @@ echo 'deb https://packagecloud.io/Hypriot/rpi/debian/ stretch main' > /etc/apt/s
 
 # set up Docker CE repository
 DOCKERREPO_FPR=9DC858229FC7DD38854AE2D88D81803C0EBFCD88
-DOCKERREPO_KEY_URL=https://download.docker.com/linux/raspbian/gpg
+DOCKERREPO_KEY_URL=https://download.docker.com/linux/debian/gpg
 get_gpg "${DOCKERREPO_FPR}" "${DOCKERREPO_KEY_URL}"
 
-echo "deb [arch=armhf] https://download.docker.com/linux/raspbian stretch $DOCKER_CE_CHANNEL" > /etc/apt/sources.list.d/docker.list
+echo "deb [arch=armhf] https://download.docker.com/linux/debian stretch $DOCKER_CE_CHANNEL" > /etc/apt/sources.list.d/docker.list
 
 
 RPI_ORG_FPR=CF8A1AF502A2AA2D763BAE7E82B129927FA3303E RPI_ORG_KEY_URL=http://archive.raspberrypi.org/debian/raspberrypi.gpg.key
@@ -127,13 +127,13 @@ get_gpg 126C0D24BD8A2942CC7DF8AC7638D0442B90D010 https://ftp-master.debian.org/k
 get_gpg D21169141CECD440F2EB8DDA9D6D8F6BC857C906 https://ftp-master.debian.org/keys/archive-key-8-security.asc
 get_gpg E1CF20DDFFE4B89E802658F1E0B11894F66AEC98 https://ftp-master.debian.org/keys/archive-key-9.asc
 get_gpg 6ED6F5CB5FA6FB2F460AE88EEDA0D2388AE22BA9 https://ftp-master.debian.org/keys/archive-key-9-security.asc
-echo "deb http://ftp.`curl -s ipinfo.io/52.193.175.205/country | tr "[:upper:]" "[:lower:]"`.debian.org/debian stretch-backports main contrib non-free" | tee /etc/apt/sources.list.d/stretch-backports.list
-echo "deb http://ftp.`curl -s ipinfo.io/52.193.175.205/country | tr "[:upper:]" "[:lower:]"`.debian.org/debian sid main contrib non-free" | tee /etc/apt/sources.list.d/sid.list
+echo "deb http://ftp.`curl -s ipinfo.io/country | tr "[:upper:]" "[:lower:]"`.debian.org/debian stretch-backports main contrib non-free" | tee /etc/apt/sources.list.d/stretch-backports.list
+#echo "deb http://ftp.`curl -s ipinfo.io/52.193.175.205/country | tr "[:upper:]" "[:lower:]"`.debian.org/debian sid main contrib non-free" | tee /etc/apt/sources.list.d/sid.list
 
 
 # install ansible
-echo 'deb http://ppa.launchpad.net/ansible/ansible/ubuntu trusty main' >> /etc/apt/sources.list.d/ansible.list
-apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 93C4A3FD7BB9C367
+# echo 'deb http://ppa.launchpad.net/ansible/ansible/ubuntu trusty main' >> /etc/apt/sources.list.d/ansible.list
+# get_gpg 6125E2A8C77F2818FB7BD15B93C4A3FD7BB9C367 "https://keyserver.ubuntu.com/pks/lookup?op=get&search=0x93C4A3FD7BB9C367"
 
 # install kubeadmn
 curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | apt-key add -
@@ -181,7 +181,7 @@ fi
 printf "# Spawn a getty on Raspberry Pi serial line\nT0:23:respawn:/sbin/getty -L ttyAMA0 115200 vt100\n" >> /etc/inittab
 
 # boot/cmdline.txt
-echo "dwc_otg.lpm_enable=0 console=serial0,115200 console=tty1 root=/dev/mmcblk0p2 rootfstype=ext4 cgroup_enable=cpuset cgroup_enable=memory swapaccount=1 elevator=deadline fsck.repair=yes rootwait quiet init=/usr/lib/raspi-config/init_resize.sh" > /boot/cmdline.txt
+echo "dwc_otg.lpm_enable=0 console=serial0,115200 console=tty1 root=/dev/mmcblk0p2 rootfstype=ext4 cgroup_enable=cpuset cgroup_enable=memory cgroup_memory=1 swapaccount=1 elevator=deadline fsck.repair=yes rootwait quiet init=/usr/lib/raspi-config/init_resize.sh" > /boot/cmdline.txt
 
 # create a default boot/config.txt file (details see http://elinux.org/RPiconfig)
 echo "
@@ -379,11 +379,14 @@ dhcp-option=option:router,192.168.179.1
 dhcp-option=option:dns-server,192.168.179.1,8.8.8.8,8.8.4.4
 dhcp-option=option:ntp-server,192.168.179.1
 port=53
-' > /etc/dnsmasq.conf
+' > /etc/rdbox/dnsmasq.conf
+cp /etc/dnsmasq.conf /etc/rdbox/dnsmasq.conf.org
+mv /etc/dnsmasq.conf /etc/dnsmasq.conf.org
+ln -s /etc/rdbox/dnsmasq.conf /etc/dnsmasq.conf
 echo '192.168.179.1 rdbox-master-00 rdbox-master-00.rdbox.lan
 192.168.179.2 rdbox-k8s-master rdbox-k8s-master.rdbox.lan
+192.168.179.3 rdbox-k8s-vpn rdbox-k8s-vpn.rdbox.lan
 ' > /etc/rdbox/dnsmasq.hosts.conf
-
 touch /etc/rdbox/dnsmasq.k8s_external_svc.hosts.conf
 
 # enable auto update & upgrade
@@ -404,6 +407,7 @@ apt-get install -y \
   nfs-kernel-server \
   nfs-common
 sudo systemctl disable nfs-kernel-server.service
+echo "/usr/local/share/rdbox 192.168.179.0/24(rw,sync,no_subtree_check,no_root_squash,no_all_squash)" >> /etc/exports
 
 # install transproxy
 gdebi -n `ls /tmp/deb-files/*.deb | grep transproxy | grep -v dbgsym | sort -r | head -1`
@@ -523,13 +527,12 @@ parameter-http-https-iptables = ""
 ' > /etc/transproxy/transproxy.conf
 
 # For ansible
-apt-get install -y -t trusty \
-  ansible
+#apt-get install -y -t trusty \
+#  ansible
 
 # For Helm(k8s)
 apt-get install -y \
   snapd
-snap install helm --classic
 ln -s /snap/bin/helm /usr/local/bin/helm
 
 # For Network Debug
@@ -538,13 +541,12 @@ apt-get install -y \
   traceroute
 
 # For rdbox_cli
-apt-get install -y -t sid \
-  python3-cachetools \
-  python3-pyasn1-modules
 apt-get install -y \
-  python3-kubernetes
-apt-get install -y \
-  python3-crontab
+  python-pip \
+  python3-pip
+pip3 install kubernetes
+pip3 install python-crontab
+pip3 install ansible
 
 # disable dhcpcd
 systemctl disable dhcpcd.service
@@ -562,6 +564,7 @@ Package: *
 Pin: origin packages.ros.org
 Pin-Priority: 1001
 ' > /etc/apt/preferences.d/ros-latest
+
 apt-get update
 
 apt-get install -y \
@@ -572,8 +575,14 @@ apt-get install -y \
   python-catkin-pkg \
   python-catkin-pkg \
   python-catkin-pkg-modules \
-  python-catkin-tools \
-  build-essential
+  python-catkin-tools 
+apt-get install -y \
+  dpkg-dev \
+  g++ \
+  gcc \
+  libc6-dev \
+  make
+  
 
 if [ $EDITION = "with_tb3" ]; then
   apt-get install -y \
@@ -681,7 +690,7 @@ cp /etc/os-release /boot/os-release
 
 
 # RDBOX ##################################################
-sed -e "2 s/HypriotOS/RDBOX on HypriotOS/g" /etc/motd
+sed -e "2 s/HypriotOS/RDBOX on HypriotOS/g" /etc/motd | tee /etc/motd
 sed -i "/RDBOX/a \
 . \n \
             .___. \n \
