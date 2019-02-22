@@ -95,7 +95,8 @@ echo "nameserver 8.8.8.8" > "${DEST}"
 echo "nameserver 8.8.4.4" >> "${DEST}"
 
 # set up hypriot rpi repository for rpi specific kernel- and firmware-packages
-PACKAGECLOUD_FPR=418A7F2FB0E1E6E7EABF6FE8C2E73424D59097AB
+#PACKAGECLOUD_FPR=418A7F2FB0E1E6E7EABF6FE8C2E73424D59097AB
+PACKAGECLOUD_FPR=6A037BB52DF7D46D99DC59C101666247EBFF1218
 PACKAGECLOUD_KEY_URL=https://packagecloud.io/gpg.key
 get_gpg "${PACKAGECLOUD_FPR}" "${PACKAGECLOUD_KEY_URL}"
 
@@ -297,6 +298,8 @@ apt-get install -y \
   gdebi
 ## hostapd
 gdebi -n `ls /tmp/deb-files/*.deb | grep hostapd_ | grep -v dbgsym | sort -r | head -1`
+#apt-get install -y \
+#  hostapd
 ## rdbox
 gdebi -n `ls /tmp/deb-files/*.deb | grep rdbox_ | grep -v dbgsym | sort -r | head -1`
 systemctl disable rdbox-boot.service
@@ -332,9 +335,9 @@ apt-get install -y \
 
 # Security settings
 ## /etc/ssh/sshd_config
-sed -i '/^#Port 22$/c Port 12810' /etc/ssh/sshd_config
+sed -i '/^#Port 22$/c Port 22' /etc/ssh/sshd_config
 sed -i '/^#LoginGraceTime 2m$/c LoginGraceTime 10' /etc/ssh/sshd_config
-#sed -i '/^#PasswordAuthentication yes$/c PasswordAuthentication no' /etc/ssh/sshd_config
+sed -i '/^#PasswordAuthentication yes$/c PasswordAuthentication no' /etc/ssh/sshd_config
 echo "MaxAuthTries 2" >> /etc/ssh/sshd_config
 
 # Locale settings
@@ -365,29 +368,10 @@ apt-get install -y \
   dnsmasq \
   resolvconf
 systemctl disable dnsmasq.service
-echo 'no-dhcp-interface=eth0,wlan0,wlan1,wlan2,wlan3
-listen-address=127.0.0.1,192.168.179.1
-interface=br0
-dhcp-leasefile=/etc/rdbox/dnsmasq.leases
-domain=rdbox.lan
-expand-hosts
-no-hosts
-addn-hosts=/etc/rdbox/dnsmasq.hosts.conf
-addn-hosts=/etc/rdbox/dnsmasq.k8s_external_svc.hosts.conf
-dhcp-range=192.168.179.11,192.168.179.254,255.255.255.0,30d
-dhcp-option=option:router,192.168.179.1
-dhcp-option=option:dns-server,192.168.179.1,8.8.8.8,8.8.4.4
-dhcp-option=option:ntp-server,192.168.179.1
-port=53
-' > /etc/rdbox/dnsmasq.conf
 cp /etc/dnsmasq.conf /etc/rdbox/dnsmasq.conf.org
 mv /etc/dnsmasq.conf /etc/dnsmasq.conf.org
+touch /etc/rdbox/dnsmasq.conf
 ln -s /etc/rdbox/dnsmasq.conf /etc/dnsmasq.conf
-echo '192.168.179.1 rdbox-master-00 rdbox-master-00.rdbox.lan
-192.168.179.2 rdbox-k8s-master rdbox-k8s-master.rdbox.lan
-192.168.179.3 rdbox-k8s-vpn rdbox-k8s-vpn.rdbox.lan
-' > /etc/rdbox/dnsmasq.hosts.conf
-touch /etc/rdbox/dnsmasq.k8s_external_svc.hosts.conf
 
 # enable auto update & upgrade
 apt-get install -y \
@@ -407,7 +391,6 @@ apt-get install -y \
   nfs-kernel-server \
   nfs-common
 sudo systemctl disable nfs-kernel-server.service
-echo "/usr/local/share/rdbox 192.168.179.0/24(rw,sync,no_subtree_check,no_root_squash,no_all_squash)" >> /etc/exports
 
 # install transproxy
 gdebi -n `ls /tmp/deb-files/*.deb | grep transproxy | grep -v dbgsym | sort -r | head -1`
@@ -527,8 +510,10 @@ parameter-http-https-iptables = ""
 ' > /etc/transproxy/transproxy.conf
 
 # For ansible
-#apt-get install -y -t trusty \
-#  ansible
+apt-get install -y \
+  libffi-dev \
+  python3-crypto \
+  python3-dev
 
 # For Helm(k8s)
 apt-get install -y \
@@ -543,7 +528,8 @@ apt-get install -y \
 # For rdbox_cli
 apt-get install -y \
   python-pip \
-  python3-pip
+  python3-pip \
+  hwinfo
 pip3 install kubernetes
 pip3 install python-crontab
 pip3 install ansible
@@ -551,113 +537,7 @@ pip3 install ansible
 # disable dhcpcd
 systemctl disable dhcpcd.service
 
-# install ROS
-echo "disable-ipv6" > ~/.gnupg/dirmngr.conf
-echo "disable-ipv6" > ~/dirmngr.conf
-apt-get install -y \
-  dirmngr
-sleep 20
-apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-key 421C365BD9FF1F717815A3895523BAEEB01FA116
-sh -c 'echo "deb http://packages.ros.org/ros/ubuntu $(lsb_release -sc) main" > /etc/apt/sources.list.d/ros-latest.list'
-echo '
-Package: *
-Pin: origin packages.ros.org
-Pin-Priority: 1001
-' > /etc/apt/preferences.d/ros-latest
-
-apt-get update
-
-apt-get install -y \
-  python-rosdep \
-  python-rosinstall-generator \
-  python-wstool \
-  python-rosinstall \
-  python-catkin-pkg \
-  python-catkin-pkg \
-  python-catkin-pkg-modules \
-  python-catkin-tools 
-apt-get install -y \
-  dpkg-dev \
-  g++ \
-  gcc \
-  libc6-dev \
-  make
-  
-
-if [ $EDITION = "with_tb3" ]; then
-  apt-get install -y \
-    libraspberrypi-dev
-  apt-get install -y \
-    python-pip \
-    python-numpy \
-    python3-pip \
-    python3-numpy
-  gdebi -n `ls /tmp/deb-files/*.deb | grep opencv | grep -v dbgsym | sort -r | head -1`
-  ldconfig
-fi
-
-rosdep init
-rosdep update
-
-mkdir ~/ros_catkin_ws
-cd ~/ros_catkin_ws
-
-if [ $EDITION = "with_tb3" ]; then
-  echo "yaml https://raw.githubusercontent.com/UbiquityRobotics/rosdep/master/raspberry-pi.yaml" > /etc/ros/rosdep/sources.list.d/30-ubiquity.list
-  echo "opencv3:
-    debian:
-      apt:
-        packages: [libopencv3]" > /etc/ros/rosdep/sources.list.d/.30-rdbox.yaml
-  echo "yaml file:///etc/ros/rosdep/sources.list.d/.30-rdbox.yaml" > /etc/ros/rosdep/sources.list.d/30-rdbox.list
-  rosdep update
-fi
-
-rosinstall_generator ros_comm --rosdistro kinetic --deps --wet-only --tar > kinetic-ros_comm-wet.rosinstall
-
-if [ $EDITION = "with_tb3" ]; then
-  rosinstall_generator robot --rosdistro kinetic --deps --wet-only --tar > kinetic-robot-wet.rosinstall
-  rosinstall_generator perception --rosdistro kinetic --deps --wet-only --tar > kinetic-perception-wet.rosinstall
-  rosinstall_generator rosserial --rosdistro kinetic --deps --wet-only --tar > kinetic-rosserial-wet.rosinstall
-fi
-
-wstool init
-wstool merge kinetic-ros_comm-wet.rosinstall
-
-if [ $EDITION = "with_tb3" ]; then
-  wstool merge kinetic-ros_comm-wet.rosinstall
-  wstool merge kinetic-robot-wet.rosinstall
-  wstool merge kinetic-perception-wet.rosinstall
-  wstool merge kinetic-rosserial-wet.rosinstall
-  wstool set --git raspicam_node https://github.com/UbiquityRobotics/raspicam_node.git -v indigo -y
-  wstool set --git hls_lfcd_lds_driver https://github.com/ROBOTIS-GIT/hls_lfcd_lds_driver.git -v kinetic-devel -y
-  wstool set --git turtlebot3 https://github.com/ROBOTIS-GIT/turtlebot3.git -v kinetic-devel -y
-  wstool set --git turtlebot3_msgs https://github.com/ROBOTIS-GIT/turtlebot3_msgs.git -v kinetic-devel -y
-  wstool rm opencv3
-  wstool rm pcl_conversions
-  wstool rm pcl_msgs
-  wstool rm perception_pcl/pcl_ros
-  wstool rm perception_pcl/perception_pcl
-  wstool rm metapackages/perception
-fi
-
-wstool init -j8 src .rosinstall
-wstool update -j4 -t src
-
-if [ $EDITION = "with_tb3" ]; then
-  rm -rf ~/ros_catkin_ws/src/turtlebot3/turtlebot3_description
-  rm -rf ~/ros_catkin_ws/src/turtlebot3/turtlebot3_example
-  rm -rf ~/ros_catkin_ws/src/turtlebot3/turtlebot3_navigation
-  rm -rf ~/ros_catkin_ws/src/turtlebot3/turtlebot3_slam
-  rm -rf ~/ros_catkin_ws/src/turtlebot3/turtlebot3_teleop
-  sed -i "/exec_depend/d" ~/ros_catkin_ws/src/turtlebot3/turtlebot3/package.xml
-  sed -i "/exec_depend/d" ~/ros_catkin_ws/src/turtlebot3/turtlebot3_bringup/package.xml
-fi
-
-rosdep install --from-paths src --ignore-src --rosdistro kinetic -y --os=debian:stretch
-
-mkdir -p /opt/ros/kinetic
-./src/catkin/bin/catkin_make_isolated -j4 -l4 --install --no-color --install-space /opt/ros/kinetic -DCMAKE_BUILD_TYPE=Release 
-
+# for TB3 used by Tutorial
 echo 'ATTRS{idVendor}=="0483" ATTRS{idProduct}=="5740", ENV{ID_MM_DEVICE_IGNORE}="1", MODE:="0666"' >> /etc/udev/rules.d/99-turtlebot3-cdc.rules
 echo 'ATTRS{idVendor}=="0483" ATTRS{idProduct}=="df11", MODE:="0666"' >> /etc/udev/rules.d/99-turtlebot3-cdc.rules
 echo 'ATTRS{idVendor}=="fff1" ATTRS{idProduct}=="ff48", ENV{ID_MM_DEVICE_IGNORE}="1", MODE:="0666"' >> /etc/udev/rules.d/99-turtlebot3-cdc.rules
@@ -683,20 +563,3 @@ rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 echo "HYPRIOT_DEVICE=\"$HYPRIOT_DEVICE\"" >> /etc/os-release
 echo "HYPRIOT_IMAGE_VERSION=\"$HYPRIOT_IMAGE_VERSION\"" >> /etc/os-release
 cp /etc/os-release /boot/os-release
-
-
-
-
-
-
-# RDBOX ##################################################
-sed -e "2 s/HypriotOS/RDBOX on HypriotOS/g" /etc/motd | tee /etc/motd
-sed -i "/RDBOX/a \
-. \n \
-            .___. \n \
-           /___/| \n \
-           |   |/ \n \
-           .---.  \n \
-           RDBOX  \n \
-- A Robotics Developers BOX - " /etc/motd
-################################################ RDBOX #
