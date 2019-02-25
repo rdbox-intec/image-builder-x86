@@ -94,16 +94,6 @@ mkdir -p "$(dirname "${DEST}")"
 echo "nameserver 8.8.8.8" > "${DEST}"
 echo "nameserver 8.8.4.4" >> "${DEST}"
 
-# set up hypriot rpi repository for rpi specific kernel- and firmware-packages
-#PACKAGECLOUD_FPR=418A7F2FB0E1E6E7EABF6FE8C2E73424D59097AB
-PACKAGECLOUD_FPR=6A037BB52DF7D46D99DC59C101666247EBFF1218
-PACKAGECLOUD_KEY_URL=https://packagecloud.io/gpg.key
-get_gpg "${PACKAGECLOUD_FPR}" "${PACKAGECLOUD_KEY_URL}"
-
-curl -L https://packagecloud.io/Hypriot/rpi/gpgkey | sudo apt-key add -
-
-echo 'deb https://packagecloud.io/Hypriot/rpi/debian/ stretch main' > /etc/apt/sources.list.d/hypriot.list
-
 # set up Docker CE repository
 DOCKERREPO_FPR=9DC858229FC7DD38854AE2D88D81803C0EBFCD88
 DOCKERREPO_KEY_URL=https://download.docker.com/linux/debian/gpg
