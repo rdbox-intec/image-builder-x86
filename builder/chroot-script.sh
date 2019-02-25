@@ -190,13 +190,13 @@ hdmi_force_hotplug=1
 enable_uart=0
 " > boot/config.txt
 
-if [ $1 = "rdbox" ]; then
+if [ $EDITION = "rdbox" ]; then
 echo "# camera settings, see http://elinux.org/RPiconfig#Camera
 start_x=1
 disable_camera_led=1
 gpu_mem=128
 " >> boot/config.txt
-elif [ $1 = "with_tb3" ]; then
+elif [ $EDITION = "with_tb3" ]; then
 echo "# camera settings, see http://elinux.org/RPiconfig#Camera
 start_x=1
 disable_camera_led=1
@@ -338,6 +338,7 @@ apt-get install -y \
 sed -i '/^#Port 22$/c Port 22' /etc/ssh/sshd_config
 sed -i '/^#LoginGraceTime 2m$/c LoginGraceTime 10' /etc/ssh/sshd_config
 sed -i '/^#PasswordAuthentication yes$/c PasswordAuthentication no' /etc/ssh/sshd_config
+sed -i '/^#PermitRootLogin prohibit-password$/c PermitRootLogin no' /etc/ssh/sshd_config
 echo "MaxAuthTries 2" >> /etc/ssh/sshd_config
 
 # Locale settings
@@ -509,11 +510,6 @@ disable-dnsproxy = false
 parameter-http-https-iptables = ""
 ' > /etc/transproxy/transproxy.conf
 
-# For ansible
-apt-get install -y \
-  libffi-dev \
-  python3-crypto \
-  python3-dev
 
 # For Helm(k8s)
 apt-get install -y \
@@ -532,7 +528,18 @@ apt-get install -y \
   hwinfo
 pip3 install kubernetes
 pip3 install python-crontab
+## For ansible
+apt-get install -y \
+  libffi-dev \
+  python3-crypto \
+  python3-dev
 pip3 install ansible
+mkdir -p -m 777 /etc/ansible
+echo '[ssh_connection]
+ssh_args = -o ControlMaster=auto -o ControlPersist=60s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null
+[defaults]
+retry_files_save_path = "/tmp"
+' > /etc/ansible/ansible.cfg
 
 # disable dhcpcd
 systemctl disable dhcpcd.service
