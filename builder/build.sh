@@ -89,15 +89,6 @@ tar -czf /image_with_kernel_root.tar.gz -C ${BUILD_PATH} .
 du -sh ${BUILD_PATH}
 ls -alh /image_with_kernel_*.tar.gz
 
-# download the ready-made raw image for the RPi
-#if [ ! -f "${BUILD_RESULT_PATH}/${RAW_IMAGE}.zip" ]; then
-#  wget -q -O "${BUILD_RESULT_PATH}/${RAW_IMAGE}.zip" "https://github.com/hypriot/image-builder-raw/releases/download/${RAW_IMAGE_VERSION}/${RAW_IMAGE}.zip"
-#fi
-
-# verify checksum of the ready-made raw image
-#echo "${RAW_IMAGE_CHECKSUM} ${BUILD_RESULT_PATH}/${RAW_IMAGE}.zip" | sha256sum -c -
-
-
 # create the image and add root base filesystem
 guestfish -v -a "/${HYPRIOT_IMAGE_NAME}"<<_EOF_
   run
@@ -117,4 +108,4 @@ zip "${BUILD_RESULT_PATH}/${HYPRIOT_IMAGE_NAME}.zip" "${HYPRIOT_IMAGE_NAME}"
 cd ${BUILD_RESULT_PATH} && sha256sum "${HYPRIOT_IMAGE_NAME}.zip" > "${HYPRIOT_IMAGE_NAME}.zip.sha256" && cd -
 
 # test sd-image that we have built
-#VERSION=${HYPRIOT_IMAGE_VERSION} rspec --format documentation --color ${BUILD_RESULT_PATH}/builder/test > ${BUILD_RESULT_PATH}/testresult.log
+VERSION=${HYPRIOT_IMAGE_VERSION} rspec --format documentation --color ${BUILD_RESULT_PATH}/builder/test > ${BUILD_RESULT_PATH}/testresult.log

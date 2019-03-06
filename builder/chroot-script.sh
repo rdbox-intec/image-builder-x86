@@ -94,16 +94,6 @@ mkdir -p "$(dirname "${DEST}")"
 echo "nameserver 8.8.8.8" > "${DEST}"
 echo "nameserver 8.8.4.4" >> "${DEST}"
 
-# set up hypriot rpi repository for rpi specific kernel- and firmware-packages
-#PACKAGECLOUD_FPR=418A7F2FB0E1E6E7EABF6FE8C2E73424D59097AB
-PACKAGECLOUD_FPR=6A037BB52DF7D46D99DC59C101666247EBFF1218
-PACKAGECLOUD_KEY_URL=https://packagecloud.io/gpg.key
-get_gpg "${PACKAGECLOUD_FPR}" "${PACKAGECLOUD_KEY_URL}"
-
-curl -L https://packagecloud.io/Hypriot/rpi/gpgkey | sudo apt-key add -
-
-echo 'deb https://packagecloud.io/Hypriot/rpi/debian/ stretch main' > /etc/apt/sources.list.d/hypriot.list
-
 # set up Docker CE repository
 DOCKERREPO_FPR=9DC858229FC7DD38854AE2D88D81803C0EBFCD88
 DOCKERREPO_KEY_URL=https://download.docker.com/linux/debian/gpg
@@ -129,12 +119,16 @@ get_gpg D21169141CECD440F2EB8DDA9D6D8F6BC857C906 https://ftp-master.debian.org/k
 get_gpg E1CF20DDFFE4B89E802658F1E0B11894F66AEC98 https://ftp-master.debian.org/keys/archive-key-9.asc
 get_gpg 6ED6F5CB5FA6FB2F460AE88EEDA0D2388AE22BA9 https://ftp-master.debian.org/keys/archive-key-9-security.asc
 echo "deb http://ftp.`curl -s ipinfo.io/country | tr "[:upper:]" "[:lower:]"`.debian.org/debian stretch-backports main contrib non-free" | tee /etc/apt/sources.list.d/stretch-backports.list
-#echo "deb http://ftp.`curl -s ipinfo.io/52.193.175.205/country | tr "[:upper:]" "[:lower:]"`.debian.org/debian sid main contrib non-free" | tee /etc/apt/sources.list.d/sid.list
 
-
-# install ansible
-# echo 'deb http://ppa.launchpad.net/ansible/ansible/ubuntu trusty main' >> /etc/apt/sources.list.d/ansible.list
-# get_gpg 6125E2A8C77F2818FB7BD15B93C4A3FD7BB9C367 "https://keyserver.ubuntu.com/pks/lookup?op=get&search=0x93C4A3FD7BB9C367"
+# our repo
+curl -s https://bintray.com/user/downloadSubjectPublicKey?username=rdbox | apt-key add -
+echo "deb https://dl.bintray.com/rdbox/deb stretch main
+deb https://dl.bintray.com/rdbox/deb stretch rdbox" | tee /etc/apt/sources.list.d/rdbox.list
+echo 'Package: *
+Pin: release n=stretch
+Pin: release c=rdbox
+Pin: origin dl.bintray.com
+Pin-Priority: 999' | tee /etc/apt/preferences.d/rdbox
 
 # install kubeadmn
 curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | apt-key add -
@@ -190,13 +184,13 @@ hdmi_force_hotplug=1
 enable_uart=0
 " > boot/config.txt
 
-if [ $1 = "rdbox" ]; then
+if [ $EDITION = "rdbox" ]; then
 echo "# camera settings, see http://elinux.org/RPiconfig#Camera
 start_x=1
 disable_camera_led=1
 gpu_mem=128
 " >> boot/config.txt
-elif [ $1 = "with_tb3" ]; then
+elif [ $EDITION = "with_tb3" ]; then
 echo "# camera settings, see http://elinux.org/RPiconfig#Camera
 start_x=1
 disable_camera_led=1
@@ -287,25 +281,15 @@ chmod +x usr/local/bin/rpi-serial-console
 
 
 # RDBOX ##################################################
-# enable experimental
-mkdir -p /etc/docker
-echo '{
-  "experimental": true
-}
-' > /etc/docker/daemon.json
-
+# our repo
 apt-get install -y \
-  gdebi
-## hostapd
-gdebi -n `ls /tmp/deb-files/*.deb | grep hostapd_ | grep -v dbgsym | sort -r | head -1`
-#apt-get install -y \
-#  hostapd
-## rdbox
-gdebi -n `ls /tmp/deb-files/*.deb | grep rdbox_ | grep -v dbgsym | sort -r | head -1`
+   softether-vpnbridge \
+   softether-vpncmd 
+apt-get install -y \
+   hostapd
+apt-get install -y \
+   rdbox
 systemctl disable rdbox-boot.service
-## softether-vpn
-gdebi -n `ls /tmp/deb-files/*.deb | grep softether-vpncmd_ | grep -v dbgsym | sort -r | head -1`
-gdebi -n `ls /tmp/deb-files/*.deb | grep softether-vpnbridge_ | grep -v dbgsym | sort -r | head -1`
 
 # Built in WiFi
 ## enable udev/rules.d
@@ -315,6 +299,10 @@ echo sed -i '/^KERNEL!="ath/c KERNEL!="ath*|msh*|ra*|sta*|ctc*|lcs*|hsi*|eth*|wl
 echo 'SUBSYSTEM=="net", ACTION=="add", DRIVERS=="?*", ATTR{address}=="b8:27:eb:??:??:??", ATTR{dev_id}=="0x0", ATTR{type}=="1", KERNEL=="eth*", NAME="eth0"
 SUBSYSTEM=="net", ACTION=="add", DRIVERS=="?*", ATTR{address}=="b8:27:eb:??:??:??", ATTR{dev_id}=="0x0", ATTR{type}=="1", KERNEL=="wlan*", NAME="wlan10"
 ' > /etc/udev/rules.d/70-persistent-net.rules
+
+# enable daemon.json
+mkdir -p /etc/docker
+echo '{}' > /etc/docker/daemon.json
 
 # Multi-hop Wi-Fi
 ## bridge and batman
@@ -338,6 +326,7 @@ apt-get install -y \
 sed -i '/^#Port 22$/c Port 22' /etc/ssh/sshd_config
 sed -i '/^#LoginGraceTime 2m$/c LoginGraceTime 10' /etc/ssh/sshd_config
 sed -i '/^#PasswordAuthentication yes$/c PasswordAuthentication no' /etc/ssh/sshd_config
+sed -i '/^#PermitRootLogin prohibit-password$/c PermitRootLogin no' /etc/ssh/sshd_config
 echo "MaxAuthTries 2" >> /etc/ssh/sshd_config
 
 # Locale settings
@@ -393,7 +382,8 @@ apt-get install -y \
 sudo systemctl disable nfs-kernel-server.service
 
 # install transproxy
-gdebi -n `ls /tmp/deb-files/*.deb | grep transproxy | grep -v dbgsym | sort -r | head -1`
+apt-get install -y \
+  transproxy
 echo '# transproxy.conf
 # vim: syntax=toml
 # version: 0.0.1
@@ -509,11 +499,6 @@ disable-dnsproxy = false
 parameter-http-https-iptables = ""
 ' > /etc/transproxy/transproxy.conf
 
-# For ansible
-apt-get install -y \
-  libffi-dev \
-  python3-crypto \
-  python3-dev
 
 # For Helm(k8s)
 apt-get install -y \
@@ -532,7 +517,18 @@ apt-get install -y \
   hwinfo
 pip3 install kubernetes
 pip3 install python-crontab
+## For ansible
+apt-get install -y \
+  libffi-dev \
+  python3-crypto \
+  python3-dev
 pip3 install ansible
+mkdir -p -m 777 /etc/ansible
+echo '[ssh_connection]
+ssh_args = -o ControlMaster=auto -o ControlPersist=60s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null
+[defaults]
+retry_files_save_path = "/tmp"
+' > /etc/ansible/ansible.cfg
 
 # disable dhcpcd
 systemctl disable dhcpcd.service
@@ -542,6 +538,8 @@ echo 'ATTRS{idVendor}=="0483" ATTRS{idProduct}=="5740", ENV{ID_MM_DEVICE_IGNORE}
 echo 'ATTRS{idVendor}=="0483" ATTRS{idProduct}=="df11", MODE:="0666"' >> /etc/udev/rules.d/99-turtlebot3-cdc.rules
 echo 'ATTRS{idVendor}=="fff1" ATTRS{idProduct}=="ff48", ENV{ID_MM_DEVICE_IGNORE}="1", MODE:="0666"' >> /etc/udev/rules.d/99-turtlebot3-cdc.rules
 echo 'ATTRS{idVendor}=="10c4" ATTRS{idProduct}=="ea60", ENV{ID_MM_DEVICE_IGNORE}="1", MODE:="0666"' >> /etc/udev/rules.d/99-turtlebot3-cdc.rules
+
+systemctl disable systemd-resolved
 
 cd ~
 
