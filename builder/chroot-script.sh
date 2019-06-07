@@ -261,6 +261,7 @@ apt-get install -y \
   --no-install-recommends \
   python
 curl -sSL https://bootstrap.pypa.io/get-pip.py | python
+curl -sSL https://bootstrap.pypa.io/get-pip.py | python3
 pip install "docker-compose==${DOCKER_COMPOSE_VERSION}"
 
 # install bash completion for Docker Compose
@@ -281,15 +282,17 @@ chmod +x usr/local/bin/rpi-serial-console
 
 
 # RDBOX ##################################################
+## rdbox
+apt-get install -y \
+  gdebi
+gdebi -n `ls /tmp/deb-files/*.deb | grep rdbox_ | grep -v dbgsym | sort -r | head -1`
+systemctl disable rdbox-boot.service
 # our repo
 apt-get install -y \
    softether-vpnbridge \
    softether-vpncmd 
 apt-get install -y \
    hostapd
-apt-get install -y \
-   rdbox
-systemctl disable rdbox-boot.service
 
 # Built in WiFi
 ## enable udev/rules.d
@@ -510,19 +513,19 @@ apt-get install -y \
   dnsutils \
   traceroute
 
-# For rdbox_cli
-apt-get install -y \
-  python-pip \
-  python3-pip \
-  hwinfo
-pip3 install kubernetes
-pip3 install python-crontab
 ## For ansible
 apt-get install -y \
   libffi-dev \
   python3-crypto \
+  build-essential \
+  fakeroot \
+  zlib1g \
+  libssl-dev \
   python3-dev
-pip3 install ansible
+# For rdbox_cli
+apt-get install -y \
+  hwinfo
+pip3 install -r /opt/rdbox/bin/requirements.txt
 mkdir -p -m 777 /etc/ansible
 echo '[ssh_connection]
 ssh_args = -o ControlMaster=auto -o ControlPersist=60s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null
