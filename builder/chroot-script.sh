@@ -118,7 +118,7 @@ get_gpg 126C0D24BD8A2942CC7DF8AC7638D0442B90D010 https://ftp-master.debian.org/k
 get_gpg D21169141CECD440F2EB8DDA9D6D8F6BC857C906 https://ftp-master.debian.org/keys/archive-key-8-security.asc
 get_gpg E1CF20DDFFE4B89E802658F1E0B11894F66AEC98 https://ftp-master.debian.org/keys/archive-key-9.asc
 get_gpg 6ED6F5CB5FA6FB2F460AE88EEDA0D2388AE22BA9 https://ftp-master.debian.org/keys/archive-key-9-security.asc
-echo "deb http://ftp.`curl -s ipinfo.io/country | tr "[:upper:]" "[:lower:]"`.debian.org/debian stretch-backports main contrib non-free" | tee /etc/apt/sources.list.d/stretch-backports.list
+echo "deb http://ftp.$(curl -s ipinfo.io/country | tr "[:upper:]" "[:lower:]").debian.org/debian stretch-backports main contrib non-free" | tee /etc/apt/sources.list.d/stretch-backports.list
 
 # our repo
 curl -s https://bintray.com/user/downloadSubjectPublicKey?username=rdbox | apt-key add -
@@ -184,13 +184,13 @@ hdmi_force_hotplug=1
 enable_uart=0
 " > boot/config.txt
 
-if [ $EDITION = "rdbox" ]; then
+if [ "${EDITION}" = "rdbox" ]; then
 echo "# camera settings, see http://elinux.org/RPiconfig#Camera
 start_x=1
 disable_camera_led=1
 gpu_mem=128
 " >> boot/config.txt
-elif [ $EDITION = "with_tb3" ]; then
+elif [ "${EDITION}" = "with_tb3" ]; then
 echo "# camera settings, see http://elinux.org/RPiconfig#Camera
 start_x=1
 disable_camera_led=1
@@ -322,10 +322,10 @@ echo "batman-adv" >> /etc/modules
 apt-get install -y \
   apt-transport-https
 apt-get install -y \
-  kubelet=$KUBEADM_VERSION \
-  kubeadm=$KUBEADM_VERSION \
-  kubectl=$KUBEADM_VERSION \
-  kubernetes-cni=$KUBERNETES_CNI_VERSION
+  kubelet="${KUBEADM_VERSION}" \
+  kubeadm="${KUBEADM_VERSION}" \
+  kubectl="${KUBEADM_VERSION}" \
+  kubernetes-cni="${KUBERNETES_CNI_VERSION}"
 
 # Security settings
 ## /etc/ssh/sshd_config
@@ -529,7 +529,7 @@ apt-get install -y \
 apt-get install -y \
   hwinfo
 pip3 install -r /opt/rdbox/bin/requirements.txt
-mkdir -p -m 777 /etc/ansible
+mkdir -m 777 /etc/ansible
 echo '[ssh_connection]
 ssh_args = -o ControlMaster=auto -o ControlPersist=60s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null
 [defaults]
@@ -540,10 +540,11 @@ retry_files_save_path = "/tmp"
 systemctl disable dhcpcd.service
 
 # for TB3 used by Tutorial
-echo 'ATTRS{idVendor}=="0483" ATTRS{idProduct}=="5740", ENV{ID_MM_DEVICE_IGNORE}="1", MODE:="0666"' >> /etc/udev/rules.d/99-turtlebot3-cdc.rules
-echo 'ATTRS{idVendor}=="0483" ATTRS{idProduct}=="df11", MODE:="0666"' >> /etc/udev/rules.d/99-turtlebot3-cdc.rules
-echo 'ATTRS{idVendor}=="fff1" ATTRS{idProduct}=="ff48", ENV{ID_MM_DEVICE_IGNORE}="1", MODE:="0666"' >> /etc/udev/rules.d/99-turtlebot3-cdc.rules
-echo 'ATTRS{idVendor}=="10c4" ATTRS{idProduct}=="ea60", ENV{ID_MM_DEVICE_IGNORE}="1", MODE:="0666"' >> /etc/udev/rules.d/99-turtlebot3-cdc.rules
+echo 'ATTRS{idVendor}=="0483" ATTRS{idProduct}=="5740", ENV{ID_MM_DEVICE_IGNORE}="1", MODE:="0666"
+ATTRS{idVendor}=="0483" ATTRS{idProduct}=="df11", MODE:="0666"
+ATTRS{idVendor}=="fff1" ATTRS{idProduct}=="ff48", ENV{ID_MM_DEVICE_IGNORE}="1", MODE:="0666"
+ATTRS{idVendor}=="10c4" ATTRS{idProduct}=="ea60", ENV{ID_MM_DEVICE_IGNORE}="1", MODE:="0666"
+' > /etc/udev/rules.d/99-turtlebot3-cdc.rules
 
 systemctl disable systemd-resolved
 
