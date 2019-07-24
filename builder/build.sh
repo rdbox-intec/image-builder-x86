@@ -34,8 +34,6 @@ HYPRIOT_IMAGE_VERSION=${VERSION:="dirty"}
 HYPRIOT_IMAGE_NAME="hypriotos-rpi-${HYPRIOT_IMAGE_VERSION}.img"
 export HYPRIOT_IMAGE_VERSION
 
-unzip -p "${BUILD_RESULT_PATH}/${RAW_IMAGE}" > "/${HYPRIOT_IMAGE_NAME}"
-
 # create build directory for assembling our image filesystem
 rm -rf ${BUILD_PATH}
 mkdir ${BUILD_PATH}
@@ -88,6 +86,16 @@ rm -Rf ${BUILD_PATH}/boot
 tar -czf /image_with_kernel_root.tar.gz -C ${BUILD_PATH} .
 du -sh ${BUILD_PATH}
 ls -alh /image_with_kernel_*.tar.gz
+
+# download the ready-made raw image for the RPi
+if [ ! -f "${BUILD_RESULT_PATH}/${RAW_IMAGE}.zip" ]; then
+  wget -q -O "${BUILD_RESULT_PATH}/${RAW_IMAGE}.zip" "https://github.com/rdbox-intec/image-builder-raw/releases/download/${RAW_IMAGE_VERSION}/${RAW_IMAGE}.zip"
+fi
+
+# verify checksum of the ready-made raw image
+echo "${RAW_IMAGE_CHECKSUM} ${BUILD_RESULT_PATH}/${RAW_IMAGE}.zip" | sha256sum -c -
+
+unzip -p "${BUILD_RESULT_PATH}/${RAW_IMAGE}" > "/${HYPRIOT_IMAGE_NAME}"
 
 # create the image and add root base filesystem
 guestfish -v -a "/${HYPRIOT_IMAGE_NAME}"<<_EOF_

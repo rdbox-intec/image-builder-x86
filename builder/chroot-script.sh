@@ -283,9 +283,12 @@ chmod +x usr/local/bin/rpi-serial-console
 
 # RDBOX ##################################################
 ## rdbox
+#apt-get install -y \
+#  gdebi
+#gdebi -n `ls /tmp/deb-files/*.deb | grep rdbox_ | grep -v dbgsym | sort -r | head -1`
+#systemctl disable rdbox-boot.service
 apt-get install -y \
-  gdebi
-gdebi -n `ls /tmp/deb-files/*.deb | grep rdbox_ | grep -v dbgsym | sort -r | head -1`
+   rdbox
 systemctl disable rdbox-boot.service
 # our repo
 apt-get install -y \
