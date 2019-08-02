@@ -99,33 +99,41 @@ DOCKERREPO_FPR=9DC858229FC7DD38854AE2D88D81803C0EBFCD88
 DOCKERREPO_KEY_URL=https://download.docker.com/linux/debian/gpg
 get_gpg "${DOCKERREPO_FPR}" "${DOCKERREPO_KEY_URL}"
 
-echo "deb [arch=armhf] https://download.docker.com/linux/debian stretch $DOCKER_CE_CHANNEL" > /etc/apt/sources.list.d/docker.list
+echo "deb [arch=armhf] https://download.docker.com/linux/raspbian buster $DOCKER_CE_CHANNEL" > /etc/apt/sources.list.d/docker.list
 
+c_rehash
+
+# set up hypriot rpi repository for raspbian specific packages
+echo 'deb https://packagecloud.io/Hypriot/rpi/raspbian/ buster main' >> /etc/apt/sources.list.d/hypriot.list
+curl -L https://packagecloud.io/Hypriot/rpi/gpgkey | apt-key add -
 
 RPI_ORG_FPR=CF8A1AF502A2AA2D763BAE7E82B129927FA3303E RPI_ORG_KEY_URL=http://archive.raspberrypi.org/debian/raspberrypi.gpg.key
 get_gpg "${RPI_ORG_FPR}" "${RPI_ORG_KEY_URL}"
 
 #rm -rf /etc/apt/sources.list
-echo 'deb http://ftp.jaist.ac.jp/raspbian/ stretch main contrib non-free rpi' >> /etc/apt/sources.list.d/raspberrypi.list
-echo 'deb http://mirrors.ustc.edu.cn/archive.raspberrypi.org/debian/ stretch main ui' >> /etc/apt/sources.list.d/raspberrypi.list
-#echo 'deb http://archive.raspberrypi.org/debian/ stretch main ui' >> tee /etc/apt/sources.list.d/raspberrypi.list
-#echo 'deb http://raspbian.raspberrypi.org/raspbian/ stretch main contrib non-free rpi' >> /etc/apt/sources.list.d/raspberrypi.list
+echo 'deb http://ftp.jaist.ac.jp/raspbian/ buster main contrib non-free rpi' >> /etc/apt/sources.list.d/raspberrypi.list
+echo 'deb http://mirrors.ustc.edu.cn/archive.raspberrypi.org/debian/ buster main ui' >> /etc/apt/sources.list.d/raspberrypi.list
+#echo 'deb http://archive.raspberrypi.org/debian/ buster main ui' >> tee /etc/apt/sources.list.d/raspberrypi.list
+#echo 'deb http://raspbian.raspberrypi.org/raspbian/ buster main contrib non-free rpi' >> /etc/apt/sources.list.d/raspberrypi.list
 
 # RDBOX ################################################
+# for more infomation... https://ftp-master.debian.org/keys.html
 # install backport
 get_gpg A1BD8E9D78F7FE5C3E65D8AF8B48AD6246925553 https://ftp-master.debian.org/keys/archive-key-7.0.asc
 get_gpg 126C0D24BD8A2942CC7DF8AC7638D0442B90D010 https://ftp-master.debian.org/keys/archive-key-8.asc
 get_gpg D21169141CECD440F2EB8DDA9D6D8F6BC857C906 https://ftp-master.debian.org/keys/archive-key-8-security.asc
 get_gpg E1CF20DDFFE4B89E802658F1E0B11894F66AEC98 https://ftp-master.debian.org/keys/archive-key-9.asc
 get_gpg 6ED6F5CB5FA6FB2F460AE88EEDA0D2388AE22BA9 https://ftp-master.debian.org/keys/archive-key-9-security.asc
-echo "deb http://ftp.$(curl -s ipinfo.io/country | tr "[:upper:]" "[:lower:]").debian.org/debian stretch-backports main contrib non-free" | tee /etc/apt/sources.list.d/stretch-backports.list
+get_gpg 80D15823B7FD1561F9F7BCDDDC30D7C23CBBABEE https://ftp-master.debian.org/keys/archive-key-10.asc
+get_gpg 5E61B217265DA9807A23C5FF4DFAB270CAA96DFA https://ftp-master.debian.org/keys/archive-key-10-security.asc
+echo "deb http://ftp.$(curl -s ipinfo.io/country | tr "[:upper:]" "[:lower:]").debian.org/debian buster-backports main contrib non-free" | tee /etc/apt/sources.list.d/buster-backports.list
 
 # our repo
 curl -s https://bintray.com/user/downloadSubjectPublicKey?username=rdbox | apt-key add -
-echo "deb https://dl.bintray.com/rdbox/deb stretch main
-deb https://dl.bintray.com/rdbox/deb stretch rdbox" | tee /etc/apt/sources.list.d/rdbox.list
+echo "deb https://dl.bintray.com/rdbox/deb buster main
+deb https://dl.bintray.com/rdbox/deb buster rdbox" | tee /etc/apt/sources.list.d/rdbox.list
 echo 'Package: *
-Pin: release n=stretch
+Pin: release n=buster
 Pin: release c=rdbox
 Pin: origin dl.bintray.com
 Pin-Priority: 999' | tee /etc/apt/preferences.d/rdbox
@@ -139,6 +147,7 @@ EOF
 # In a normal installation, the stable package is used preferentially.
 echo 'APT::Default-Release "stable";' > /etc/apt/apt.conf.d/90rdbox
 ################################################ RDBOX #
+
 
 # reload package sources
 apt-get update
@@ -176,7 +185,7 @@ fi
 printf "# Spawn a getty on Raspberry Pi serial line\nT0:23:respawn:/sbin/getty -L ttyAMA0 115200 vt100\n" >> /etc/inittab
 
 # boot/cmdline.txt
-echo "dwc_otg.lpm_enable=0 console=serial0,115200 console=tty1 root=/dev/mmcblk0p2 rootfstype=ext4 cgroup_enable=cpuset cgroup_enable=memory cgroup_memory=1 swapaccount=1 elevator=deadline fsck.repair=yes rootwait quiet init=/usr/lib/raspi-config/init_resize.sh" > /boot/cmdline.txt
+echo "dwc_otg.lpm_enable=0 console=serial0,115200 console=tty1 root=PARTUUID=${IMAGE_PARTUUID_PREFIX}-02 rootfstype=ext4 cgroup_enable=cpuset cgroup_enable=memory swapaccount=1 elevator=deadline fsck.repair=yes rootwait quiet init=/usr/lib/raspi-config/init_resize.sh" > /boot/cmdline.txt
 
 # create a default boot/config.txt file (details see http://elinux.org/RPiconfig)
 echo "
@@ -204,8 +213,8 @@ echo "snd_bcm2835
 # create /etc/fstab
 echo "
 proc /proc proc defaults 0 0
-/dev/mmcblk0p1 /boot vfat defaults 0 0
-/dev/mmcblk0p2 / ext4 defaults,noatime 0 1
+PARTUUID=${IMAGE_PARTUUID_PREFIX}-01 /boot vfat defaults 0 0
+PARTUUID=${IMAGE_PARTUUID_PREFIX}-02 / ext4 defaults,noatime 0 1
 " > /etc/fstab
 
 # as the Pi does not have a hardware clock we need a fake one
@@ -234,11 +243,9 @@ apt-get install -y \
 
 # install cloud-init
 apt-get install -y \
+  --no-install-recommends \
   cloud-init \
   ssh-import-id
-
-# Fix cloud-init package mirrors
-sed -i '/disable_root: true/a apt_preserve_sources_list: true' /etc/cloud/cloud.cfg
 
 # Link cloud-init config to VFAT /boot partition
 mkdir -p /var/lib/cloud/seed/nocloud-net

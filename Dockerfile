@@ -7,6 +7,7 @@ RUN apt-get update && \
     qemu-user-static \
     jq \
     dirmngr \
+    xxd \
     --no-install-recommends && \
     rm -rf /var/lib/apt/lists/*
 

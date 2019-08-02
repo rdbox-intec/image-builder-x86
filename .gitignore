@@ -1,6 +1,7 @@
 *.img.zip.sha256
 *.img
 *.img.zip
+*.log
 *.tar.gz
 .vagrant/
 
