@@ -68,7 +68,7 @@ cp -R /builder/files/* ${BUILD_PATH}/
 # make our build directory the current root
 # and install the Rasberry Pi firmware, kernel packages,
 # docker tools and some customizations
-EDITION=$1 chroot ${BUILD_PATH} /bin/bash < /builder/chroot-script.sh
+EDITION=$1 BUILDER=$2 chroot ${BUILD_PATH} /bin/bash < /builder/chroot-script.sh
 
 # unmount pseudo filesystems
 umount -l ${BUILD_PATH}/dev/pts

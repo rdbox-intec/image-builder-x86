@@ -201,7 +201,6 @@ fi
 # /etc/modules
 echo "snd_bcm2835
 " >> /etc/modules
-
 # create /etc/fstab
 echo "
 proc /proc proc defaults 0 0
@@ -282,20 +281,32 @@ chmod +x usr/local/bin/rpi-serial-console
 
 
 # RDBOX ##################################################
-## rdbox
-#apt-get install -y \
-#  gdebi
-#gdebi -n `ls /tmp/deb-files/*.deb | grep rdbox_ | grep -v dbgsym | sort -r | head -1`
-#systemctl disable rdbox-boot.service
-apt-get install -y \
-   rdbox
-systemctl disable rdbox-boot.service
-# our repo
-apt-get install -y \
-   softether-vpnbridge \
-   softether-vpncmd 
-apt-get install -y \
-   hostapd
+if [ "${BUILDER}" = "cloud" ]; then
+  ## rdbox
+  apt-get install -y \
+     rdbox
+  systemctl disable rdbox-boot.service
+  # our repo
+  apt-get install -y \
+     softether-vpnbridge \
+     softether-vpncmd 
+  apt-get install -y \
+     hostapd
+  apt-get install -y \
+    transproxy
+elif [ "${BUILDER}" = "local" ]; then
+  ## rdbox
+  apt-get install -y \
+    gdebi
+  gdebi -n `ls /tmp/deb-files/*.deb | grep rdbox_ | grep -v dbgsym | sort -r | head -1`
+  systemctl disable rdbox-boot.service
+  # our repo
+  gdebi -n `ls /tmp/deb-files/*.deb | grep softether-vpncmd_ | grep -v dbgsym | sort -r | head -1`
+  gdebi -n `ls /tmp/deb-files/*.deb | grep softether-vpnbridge_ | grep -v dbgsym | sort -r | head -1`
+  apt-get install -y \
+    hostapd
+  gdebi -n `ls /tmp/deb-files/*.deb | grep transproxy_ | grep -v dbgsym | sort -r | head -1`
+fi
 
 # Built in WiFi
 ## enable udev/rules.d
@@ -387,9 +398,7 @@ apt-get install -y \
   nfs-common
 sudo systemctl disable nfs-kernel-server.service
 
-# install transproxy
-apt-get install -y \
-  transproxy
+# config transproxy
 echo '# transproxy.conf
 # vim: syntax=toml
 # version: 0.0.1
