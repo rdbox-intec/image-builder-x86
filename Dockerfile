@@ -30,6 +30,9 @@ RUN gem update --system && \
 
 RUN apt-get update && \
     DEBIAN_FRONTEND=noninteractive apt-get install -y \
+    gcc-arm-linux-gnueabihf \
+    libc6-dev-armhf-cross \
+    qemu-arm-static \
     binfmt-support \
     qemu \
     qemu-user-static \
@@ -38,6 +41,7 @@ RUN apt-get update && \
     xxd \
     --no-install-recommends && \
     rm -rf /var/lib/apt/lists/*
+
 
 COPY builder/ /builder/
 
