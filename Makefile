@@ -1,7 +1,7 @@
 default: build
 
 build:
-	docker build -t image-builder-rpi .
+	docker build -f Dockerfile.circle -t image-builder-rpi .
 
 sd-image: build
 	docker run --rm --privileged -v $(shell pwd):/workspace -v /boot:/boot -v /lib/modules:/lib/modules -e CIRCLE_TAG -e VERSION image-builder-rpi
