@@ -3,12 +3,6 @@ default: build
 build:
 	docker build -t image-builder-rpi .
 
-build-local:
-	mkdir -p ./builder/files/tmp/deb-files/
-	cp -rf ../image-builder-raw/rpi-raw.img.zip .
-	cp -rf /var/cache/pbuilder/raspbian-stretch-armhf/result/*.deb ./builder/files/tmp/deb-files/
-	docker build -t image-builder-rpi .
-
 sd-image: build
 	docker run --rm --privileged -v $(shell pwd):/workspace -v /boot:/boot -v /lib/modules:/lib/modules -e CIRCLE_TAG -e VERSION image-builder-rpi
 
@@ -35,6 +29,13 @@ tag:
 
 
 # RDBOX #################################################
+build-local:
+	mkdir -p ./builder/files/tmp/deb-files/
+	cp -rf ../image-builder-raw/rpi-raw.img.zip .
+	#cp -rf /var/cache/pbuilder/raspbian-stretch-armhf/result/*.deb ./builder/files/tmp/deb-files/
+	cp -rf /var/cache/pbuilder/raspbian-buster-armhf/result/*.deb ./builder/files/tmp/deb-files/
+	docker build -t image-builder-rpi .
+	
 clean:
 	rm -rf *.log
 	rm -rf *.img.zip
@@ -44,13 +45,13 @@ clean:
 	rm -rf builder/files/tmp/deb-files/*
 
 sd-image-rdbox: build
-	docker run --rm --privileged -v $(shell pwd):/workspace -v /boot:/boot -v /lib/modules:/lib/modules -e CIRCLE_TAG -e VERSION image-builder-rpi /builder/build.sh rdbox
+	docker run --rm --privileged -v $(shell pwd):/workspace -v /boot:/boot -v /lib/modules:/lib/modules -e CIRCLE_TAG -e VERSION image-builder-rpi /builder/build.sh rdbox cloud
 
 sd-image-turtlebot3: build
-	docker run --rm --privileged -v $(shell pwd):/workspace -v /boot:/boot -v /lib/modules:/lib/modules -e CIRCLE_TAG -e VERSION image-builder-rpi /builder/build.sh with_tb3
+	docker run --rm --privileged -v $(shell pwd):/workspace -v /boot:/boot -v /lib/modules:/lib/modules -e CIRCLE_TAG -e VERSION image-builder-rpi /builder/build.sh with_tb3 cloud
 
 sd-image-rdbox-local: build-local
-	docker run --rm --privileged -v $(shell pwd):/workspace -v /boot:/boot -v /lib/modules:/lib/modules -e CIRCLE_TAG -e VERSION image-builder-rpi /builder/build.sh rdbox
+	docker run --rm --privileged -v $(shell pwd):/workspace -v /boot:/boot -v /lib/modules:/lib/modules -e CIRCLE_TAG -e VERSION image-builder-rpi /builder/build.sh rdbox local
 
 sd-image-turtlebot3-local: build-local
-	docker run --rm --privileged -v $(shell pwd):/workspace -v /boot:/boot -v /lib/modules:/lib/modules -e CIRCLE_TAG -e VERSION image-builder-rpi /builder/build.sh with_tb3
+	docker run --rm --privileged -v $(shell pwd):/workspace -v /boot:/boot -v /lib/modules:/lib/modules -e CIRCLE_TAG -e VERSION image-builder-rpi /builder/build.sh with_tb3 local

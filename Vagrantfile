@@ -3,7 +3,7 @@
 ENV['VAGRANT_DEFAULT_PROVIDER'] = 'virtualbox'
 
 Vagrant.configure(2) do |config|
-  config.vm.box = "ubuntu/xenial64"
+  config.vm.box = "generic/debian10"
   config.disksize.size = '60GB'
 
   config.vm.network "forwarded_port", guest: 2375, host: 2375, auto_correct: true
@@ -27,9 +27,9 @@ Vagrant.configure(2) do |config|
       ca-certificates \
       curl \
       software-properties-common
-    curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
+    curl -fsSL https://download.docker.com/linux/debian/gpg | sudo apt-key add -
     sudo add-apt-repository \
-      "deb [arch=amd64] https://download.docker.com/linux/ubuntu \
+      "deb [arch=amd64] https://download.docker.com/linux/debian \
       $(lsb_release -cs) \
       stable"
     sudo apt-get update

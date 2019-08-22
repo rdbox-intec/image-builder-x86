@@ -4,79 +4,79 @@ set -ex
 KEYSERVER="hkp://ha.pool.sks-keyservers.net:80"
 
 function clean_print(){
-  local fingerprint="${2}"
-  local func="${1}"
-
-  nospaces=${fingerprint//[:space:]/} tolowercase=${nospaces,,}
-  KEYID_long=${tolowercase:(-16)}
-  KEYID_short=${tolowercase:(-8)}
-  if [[ "${func}" == "fpr" ]]; then
-    echo "${tolowercase}"
-  elif [[ "${func}" == "long" ]]; then
-    echo "${KEYID_long}"
-  elif [[ "${func}" == "short" ]]; then
-    echo "${KEYID_short}"
-  elif [[ "${func}" == "print" ]]; then
-    if [[ "${fingerprint}" != "${nospaces}" ]]; then printf "%-10s %50s\n" fpr: "${fingerprint}"
+    local fingerprint="${2}"
+    local func="${1}"
+    
+    nospaces=${fingerprint//[:space:]/} tolowercase=${nospaces,,}
+    KEYID_long=${tolowercase:(-16)}
+    KEYID_short=${tolowercase:(-8)}
+    if [[ "${func}" == "fpr" ]]; then
+        echo "${tolowercase}"
+        elif [[ "${func}" == "long" ]]; then
+        echo "${KEYID_long}"
+        elif [[ "${func}" == "short" ]]; then
+        echo "${KEYID_short}"
+        elif [[ "${func}" == "print" ]]; then
+        if [[ "${fingerprint}" != "${nospaces}" ]]; then printf "%-10s %50s\\n" fpr: "${fingerprint}"
+        fi
+        # if [[ "${nospaces}" != "${tolowercase}" ]]; then
+        #   printf "%-10s %50s\n" nospaces: $nospaces
+        # fi
+        if [[ "${tolowercase}" != "${KEYID_long}" ]]; then
+            printf "%-10s %50s\\n" lower: "${tolowercase}"
+        fi
+        printf "%-10s %50s\\n" long: "${KEYID_long}"
+        printf "%-10s %50s\\n" short: "${KEYID_short}"
+        echo ""
+    else
+        echo "usage: function {print|fpr|long|short} GPGKEY"
     fi
-    # if [[ "${nospaces}" != "${tolowercase}" ]]; then
-    #   printf "%-10s %50s\n" nospaces: $nospaces
-    # fi
-    if [[ "${tolowercase}" != "${KEYID_long}" ]]; then
-      printf "%-10s %50s\n" lower: "${tolowercase}"
-    fi
-    printf "%-10s %50s\n" long: "${KEYID_long}"
-    printf "%-10s %50s\n" short: "${KEYID_short}"
-    echo ""
-  else
-    echo "usage: function {print|fpr|long|short} GPGKEY"
-  fi
 }
 
 
 function get_gpg(){
-  GPG_KEY="${1}"
-  KEY_URL="${2}"
-
-  clean_print print "${GPG_KEY}"
-  GPG_KEY=$(clean_print fpr "${GPG_KEY}")
-
-  if [[ "${KEY_URL}" =~ ^https?://* ]]; then
-    echo "loading key from url"
-    KEY_FILE=temp.gpg.key
-    wget -q -O "${KEY_FILE}" "${KEY_URL}"
-  elif [[ -z "${KEY_URL}" ]]; then
-    echo "no source given try to load from key server"
-#    gpg --keyserver "${KEYSERVER}" --recv-keys "${GPG_KEY}"
-    apt-key adv --keyserver "${KEYSERVER}" --recv-keys "${GPG_KEY}"
-    return $?
-  else
-    echo "keyfile given"
-    KEY_FILE="${KEY_URL}"
-  fi
-
-  FINGERPRINT_OF_FILE=$(gpg --with-fingerprint --with-colons "${KEY_FILE}" | grep fpr | rev |cut -d: -f2 | rev)
-
-  if [[ ${#GPG_KEY} -eq 16 ]]; then
-    echo "compare long keyid"
-    CHECK=$(clean_print long "${FINGERPRINT_OF_FILE}")
-  elif [[ ${#GPG_KEY} -eq 8 ]]; then
-    echo "compare short keyid"
-    CHECK=$(clean_print short "${FINGERPRINT_OF_FILE}")
-  else
-    echo "compare fingerprint"
-    CHECK=$(clean_print fpr "${FINGERPRINT_OF_FILE}")
-  fi
-
-  if [[ "${GPG_KEY}" == "${CHECK}" ]]; then
-    echo "key OK add to apt"
-    apt-key add "${KEY_FILE}"
-    rm -f "${KEY_FILE}"
-    return 0
-  else
-    echo "key invalid"
-    exit 1
-  fi
+    GPG_KEY="${1}"
+    KEY_URL="${2}"
+    
+    clean_print print "${GPG_KEY}"
+    GPG_KEY=$(clean_print fpr "${GPG_KEY}")
+    
+    if [[ "${KEY_URL}" =~ ^https?://* ]]; then
+        echo "loading key from url"
+        KEY_FILE=temp.gpg.key
+        wget -q -O "${KEY_FILE}" "${KEY_URL}"
+        elif [[ -z "${KEY_URL}" ]]; then
+        echo "no source given try to load from key server"
+        #    gpg --keyserver "${KEYSERVER}" --recv-keys "${GPG_KEY}"
+        apt-key adv --keyserver "${KEYSERVER}" --recv-keys "${GPG_KEY}"
+        return $?
+    else
+        echo "keyfile given"
+        KEY_FILE="${KEY_URL}"
+    fi
+    
+    FINGERPRINT_OF_FILE=$(gpg --with-fingerprint --with-colons "${KEY_FILE}" | grep fpr | rev |cut -d: -f2 | rev)
+    
+    if [[ ${#GPG_KEY} -eq 16 ]]; then
+        echo "compare long keyid"
+        CHECK=$(clean_print long "${FINGERPRINT_OF_FILE}")
+        elif [[ ${#GPG_KEY} -eq 8 ]]; then
+        echo "compare short keyid"
+        CHECK=$(clean_print short "${FINGERPRINT_OF_FILE}")
+    else
+        echo "compare fingerprint"
+        CHECK=$(clean_print fpr "${FINGERPRINT_OF_FILE}")
+    fi
+    
+    if [[ "${GPG_KEY}" == "${CHECK}" ]]; then
+        echo "key OK add to apt"
+        apt-key add "${KEY_FILE}"
+        rm -f "${KEY_FILE}"
+        return 0
+    else
+        echo "key invalid"
+        exit 1
+    fi
 }
 
 ## examples:
@@ -99,33 +99,39 @@ DOCKERREPO_FPR=9DC858229FC7DD38854AE2D88D81803C0EBFCD88
 DOCKERREPO_KEY_URL=https://download.docker.com/linux/debian/gpg
 get_gpg "${DOCKERREPO_FPR}" "${DOCKERREPO_KEY_URL}"
 
-echo "deb [arch=armhf] https://download.docker.com/linux/debian stretch $DOCKER_CE_CHANNEL" > /etc/apt/sources.list.d/docker.list
+echo "deb [arch=armhf] https://download.docker.com/linux/raspbian buster $DOCKER_CE_CHANNEL" > /etc/apt/sources.list.d/docker.list
 
+c_rehash
+
+# set up hypriot rpi repository for raspbian specific packages
+echo 'deb https://packagecloud.io/Hypriot/rpi/raspbian/ buster main' >> /etc/apt/sources.list.d/hypriot.list
+curl -L https://packagecloud.io/Hypriot/rpi/gpgkey | apt-key add -
 
 RPI_ORG_FPR=CF8A1AF502A2AA2D763BAE7E82B129927FA3303E RPI_ORG_KEY_URL=http://archive.raspberrypi.org/debian/raspberrypi.gpg.key
 get_gpg "${RPI_ORG_FPR}" "${RPI_ORG_KEY_URL}"
 
 #rm -rf /etc/apt/sources.list
-echo 'deb http://ftp.jaist.ac.jp/raspbian/ stretch main contrib non-free rpi' >> /etc/apt/sources.list.d/raspberrypi.list
-echo 'deb http://mirrors.ustc.edu.cn/archive.raspberrypi.org/debian/ stretch main ui' >> /etc/apt/sources.list.d/raspberrypi.list
-#echo 'deb http://archive.raspberrypi.org/debian/ stretch main ui' >> tee /etc/apt/sources.list.d/raspberrypi.list
-#echo 'deb http://raspbian.raspberrypi.org/raspbian/ stretch main contrib non-free rpi' >> /etc/apt/sources.list.d/raspberrypi.list
+echo 'deb http://archive.raspberrypi.org/debian/ buster main' | tee /etc/apt/sources.list.d/raspberrypi.list
+echo 'deb http://ftp.jaist.ac.jp/raspbian/ buster main contrib non-free rpi' >> /etc/apt/sources.list.d/raspberrypi.list
+#echo 'deb http://mirrors.ustc.edu.cn/archive.raspberrypi.org/debian/ buster main ui' >> /etc/apt/sources.list.d/raspberrypi.list
+#echo 'deb http://archive.raspberrypi.org/debian/ buster main ui' >> tee /etc/apt/sources.list.d/raspberrypi.list
+#echo 'deb http://raspbian.raspberrypi.org/raspbian/ buster main contrib non-free rpi' >> /etc/apt/sources.list.d/raspberrypi.list
 
 # RDBOX ################################################
-# install backport
+# for more infomation... https://ftp-master.debian.org/keys.html
 get_gpg A1BD8E9D78F7FE5C3E65D8AF8B48AD6246925553 https://ftp-master.debian.org/keys/archive-key-7.0.asc
 get_gpg 126C0D24BD8A2942CC7DF8AC7638D0442B90D010 https://ftp-master.debian.org/keys/archive-key-8.asc
 get_gpg D21169141CECD440F2EB8DDA9D6D8F6BC857C906 https://ftp-master.debian.org/keys/archive-key-8-security.asc
 get_gpg E1CF20DDFFE4B89E802658F1E0B11894F66AEC98 https://ftp-master.debian.org/keys/archive-key-9.asc
 get_gpg 6ED6F5CB5FA6FB2F460AE88EEDA0D2388AE22BA9 https://ftp-master.debian.org/keys/archive-key-9-security.asc
-echo "deb http://ftp.$(curl -s ipinfo.io/country | tr "[:upper:]" "[:lower:]").debian.org/debian stretch-backports main contrib non-free" | tee /etc/apt/sources.list.d/stretch-backports.list
+get_gpg 80D15823B7FD1561F9F7BCDDDC30D7C23CBBABEE https://ftp-master.debian.org/keys/archive-key-10.asc
+get_gpg 5E61B217265DA9807A23C5FF4DFAB270CAA96DFA https://ftp-master.debian.org/keys/archive-key-10-security.asc
 
 # our repo
 curl -s https://bintray.com/user/downloadSubjectPublicKey?username=rdbox | apt-key add -
-echo "deb https://dl.bintray.com/rdbox/deb stretch main
-deb https://dl.bintray.com/rdbox/deb stretch rdbox" | tee /etc/apt/sources.list.d/rdbox.list
+echo "deb https://dl.bintray.com/rdbox/deb buster main" | tee /etc/apt/sources.list.d/rdbox.list
 echo 'Package: *
-Pin: release n=stretch
+Pin: release n=buster
 Pin: release c=rdbox
 Pin: origin dl.bintray.com
 Pin-Priority: 999' | tee /etc/apt/preferences.d/rdbox
@@ -135,10 +141,8 @@ curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | apt-key add -
 cat <<EOF >/etc/apt/sources.list.d/kubernetes.list
 deb http://apt.kubernetes.io/ kubernetes-xenial main
 EOF
-
-# In a normal installation, the stable package is used preferentially.
-echo 'APT::Default-Release "stable";' > /etc/apt/apt.conf.d/90rdbox
 ################################################ RDBOX #
+
 
 # reload package sources
 apt-get update
@@ -146,56 +150,55 @@ apt-get upgrade -y
 
 # install WiFi firmware packages (same as in Raspbian)
 apt-get install -y \
-  --no-install-recommends \
-  firmware-atheros \
-  firmware-brcm80211 \
-  firmware-libertas \
-  firmware-misc-nonfree \
-  firmware-realtek
+--no-install-recommends \
+firmware-atheros \
+firmware-brcm80211 \
+firmware-libertas \
+firmware-misc-nonfree \
+firmware-realtek
 
 # install kernel- and firmware-packages
 apt-get install -y \
-  --no-install-recommends \
-  raspberrypi-bootloader \
-  libraspberrypi0 \
-  libraspberrypi-bin \
-  raspi-config
+--no-install-recommends \
+raspberrypi-bootloader \
+libraspberrypi0 \
+libraspberrypi-bin \
+raspi-config
 
 # install special Docker enabled kernel
 if [ -z "${KERNEL_URL}" ]; then
-  apt-get install -y \
+    apt-get install -y \
     --no-install-recommends \
     "raspberrypi-kernel=${KERNEL_BUILD}"
 else
-  curl -L -o /tmp/kernel.deb "${KERNEL_URL}"
-  dpkg -i /tmp/kernel.deb
-  rm /tmp/kernel.deb
+    curl -L -o /tmp/kernel.deb "${KERNEL_URL}"
+    dpkg -i /tmp/kernel.deb
+    rm /tmp/kernel.deb
 fi
 
 # enable serial console
-printf "# Spawn a getty on Raspberry Pi serial line\nT0:23:respawn:/sbin/getty -L ttyAMA0 115200 vt100\n" >> /etc/inittab
+printf "# Spawn a getty on Raspberry Pi serial line\\nT0:23:respawn:/sbin/getty -L ttyAMA0 115200 vt100\\n" >> /etc/inittab
 
 # boot/cmdline.txt
-echo "dwc_otg.lpm_enable=0 console=serial0,115200 console=tty1 root=/dev/mmcblk0p2 rootfstype=ext4 cgroup_enable=cpuset cgroup_enable=memory cgroup_memory=1 swapaccount=1 elevator=deadline fsck.repair=yes rootwait quiet init=/usr/lib/raspi-config/init_resize.sh" > /boot/cmdline.txt
+echo "dwc_otg.lpm_enable=0 console=serial0,115200 console=tty1 root=PARTUUID=${IMAGE_PARTUUID_PREFIX}-02 rootfstype=ext4 cgroup_enable=cpuset cgroup_enable=memory swapaccount=1 elevator=deadline fsck.repair=yes rootwait quiet init=/usr/lib/raspi-config/init_resize.sh" > /boot/cmdline.txt
 
 # create a default boot/config.txt file (details see http://elinux.org/RPiconfig)
 echo "
 hdmi_force_hotplug=1
 enable_uart=0
 " > boot/config.txt
-
 if [ "${EDITION}" = "rdbox" ]; then
-echo "# camera settings, see http://elinux.org/RPiconfig#Camera
+    echo "# camera settings, see http://elinux.org/RPiconfig#Camera
 start_x=1
 disable_camera_led=1
 gpu_mem=128
-" >> boot/config.txt
-elif [ "${EDITION}" = "with_tb3" ]; then
-echo "# camera settings, see http://elinux.org/RPiconfig#Camera
+    " >> boot/config.txt
+    elif [ "${EDITION}" = "with_tb3" ]; then
+    echo "# camera settings, see http://elinux.org/RPiconfig#Camera
 start_x=1
 disable_camera_led=1
 gpu_mem=128
-" >> boot/config.txt
+    " >> boot/config.txt
 fi
 
 # /etc/modules
@@ -205,41 +208,39 @@ echo "snd_bcm2835
 # create /etc/fstab
 echo "
 proc /proc proc defaults 0 0
-/dev/mmcblk0p1 /boot vfat defaults 0 0
-/dev/mmcblk0p2 / ext4 defaults,noatime 0 1
+PARTUUID=${IMAGE_PARTUUID_PREFIX}-01 /boot vfat defaults 0 0
+PARTUUID=${IMAGE_PARTUUID_PREFIX}-02 / ext4 defaults,noatime 0 1
 " > /etc/fstab
 
 # as the Pi does not have a hardware clock we need a fake one
 apt-get install -y \
-  --no-install-recommends \
-  fake-hwclock
+--no-install-recommends \
+fake-hwclock
 
 # install packages for managing wireless interfaces
 apt-get install -y \
-  --no-install-recommends \
-  wpasupplicant \
-  wireless-tools \
-  crda \
-  raspberrypi-net-mods
+--no-install-recommends \
+wpasupplicant \
+wireless-tools \
+crda \
+raspberrypi-net-mods
 
 # add firmware and packages for managing bluetooth devices
 apt-get install -y \
-  --no-install-recommends \
-  pi-bluetooth
+--no-install-recommends \
+pi-bluetooth
 
 # ensure compatibility with Docker install.sh, so `raspbian` will be detected correctly
 apt-get install -y \
-  --no-install-recommends \
-  lsb-release \
-  gettext
+--no-install-recommends \
+lsb-release \
+gettext
 
 # install cloud-init
 apt-get install -y \
-  cloud-init \
-  ssh-import-id
-
-# Fix cloud-init package mirrors
-sed -i '/disable_root: true/a apt_preserve_sources_list: true' /etc/cloud/cloud.cfg
+--no-install-recommends \
+cloud-init \
+ssh-import-id
 
 # Link cloud-init config to VFAT /boot partition
 mkdir -p /var/lib/cloud/seed/nocloud-net
@@ -258,8 +259,11 @@ curl -sSL "https://raw.githubusercontent.com/docker/machine/v${DOCKER_MACHINE_VE
 
 # install docker-compose
 apt-get install -y \
-  --no-install-recommends \
-  python
+--no-install-recommends \
+python \
+python3
+apt-get install -y \
+python3-distutils
 curl -sSL https://bootstrap.pypa.io/get-pip.py | python
 curl -sSL https://bootstrap.pypa.io/get-pip.py | python3
 pip install "docker-compose==${DOCKER_COMPOSE_VERSION}"
@@ -269,8 +273,8 @@ curl -sSL "https://raw.githubusercontent.com/docker/compose/${DOCKER_COMPOSE_VER
 
 # install docker-ce (w/ install-recommends)
 apt-get install -y --force-yes \
-  --no-install-recommends \
-  "docker-ce=${DOCKER_CE_VERSION}"
+--no-install-recommends \
+"docker-ce=${DOCKER_CE_VERSION}"
 
 # install bash completion for Docker CLI
 curl -sSL https://raw.githubusercontent.com/docker/docker-ce/master/components/cli/contrib/completion/bash/docker -o /etc/bash_completion.d/docker
@@ -282,25 +286,37 @@ chmod +x usr/local/bin/rpi-serial-console
 
 
 # RDBOX ##################################################
-## rdbox
-#apt-get install -y \
-#  gdebi
-#gdebi -n `ls /tmp/deb-files/*.deb | grep rdbox_ | grep -v dbgsym | sort -r | head -1`
-#systemctl disable rdbox-boot.service
-apt-get install -y \
-   rdbox
-systemctl disable rdbox-boot.service
-# our repo
-apt-get install -y \
-   softether-vpnbridge \
-   softether-vpncmd 
-apt-get install -y \
-   hostapd
+if [ "${BUILDER}" = "cloud" ]; then
+    ## rdbox
+    apt-get install -y \
+    rdbox
+    systemctl disable rdbox-boot.service
+    # our repo
+    apt-get install -y \
+    softether-vpnbridge \
+    softether-vpncmd
+    apt-get install -y \
+    hostapd
+    systemctl disable hostapd.service
+    apt-get install -y \
+    transproxy
+    elif [ "${BUILDER}" = "local" ]; then
+    ## rdbox
+    apt-get install -y \
+    gdebi
+    gdebi -n "$(echo /tmp/deb-files/*rdbox_*.deb | grep -v dbgsym | sed 's/ /\n/g' | sort -r | head -1)"
+    systemctl disable rdbox-boot.service
+    # our repo
+    gdebi -n "$(echo /tmp/deb-files/*softether-vpncmd_*.deb | grep -v dbgsym | sed 's/ /\n/g' | sort -r | head -1)"
+    gdebi -n "$(echo /tmp/deb-files/*softether-vpnbridge_*.deb | grep -v dbgsym | sed 's/ /\n/g' | sort -r | head -1)"
+    apt-get install -y \
+    hostapd
+    systemctl disable hostapd.service
+    systemctl disable wpa_supplicant.service
+    gdebi -n "$(echo /tmp/deb-files/*transproxy_*.deb | grep -v dbgsym | sed 's/ /\n/g' | sort -r | head -1)"
+fi
 
 # Built in WiFi
-## enable udev/rules.d
-echo sed -i '/^KERNEL!="ath/c KERNEL!="ath*|msh*|ra*|sta*|ctc*|lcs*|hsi*|eth*|wlan*", \\' /etc/udev/rules.d/75-persistent-net-generator.rules
-
 ## suppress NIC barrel
 echo 'SUBSYSTEM=="net", ACTION=="add", DRIVERS=="?*", ATTR{address}=="b8:27:eb:??:??:??", ATTR{dev_id}=="0x0", ATTR{type}=="1", KERNEL=="eth*", NAME="eth0"
 SUBSYSTEM=="net", ACTION=="add", DRIVERS=="?*", ATTR{address}=="b8:27:eb:??:??:??", ATTR{dev_id}=="0x0", ATTR{type}=="1", KERNEL=="wlan*", NAME="wlan10"
@@ -313,19 +329,19 @@ echo '{}' > /etc/docker/daemon.json
 # Multi-hop Wi-Fi
 ## bridge and batman
 apt-get install -y \
-  bridge-utils \
-  batctl
+bridge-utils \
+batctl
 echo "batman-adv" >> /etc/modules
 
 # install kubeadmn
 ## apt-get
 apt-get install -y \
-  apt-transport-https
+apt-transport-https
 apt-get install -y \
-  kubelet="${KUBEADM_VERSION}" \
-  kubeadm="${KUBEADM_VERSION}" \
-  kubectl="${KUBEADM_VERSION}" \
-  kubernetes-cni="${KUBERNETES_CNI_VERSION}"
+kubelet="${KUBEADM_VERSION}" \
+kubeadm="${KUBEADM_VERSION}" \
+kubectl="${KUBEADM_VERSION}" \
+kubernetes-cni="${KUBERNETES_CNI_VERSION}"
 
 # Security settings
 ## /etc/ssh/sshd_config
@@ -338,9 +354,16 @@ echo "MaxAuthTries 2" >> /etc/ssh/sshd_config
 # Locale settings
 ## For US JP
 apt-get install -y \
-  task-english \
-  task-japanese
+task-english \
+task-japanese \
+task-chinese-s
 sed -i '/^# ja_JP.UTF-8 UTF-8$/c ja_JP.UTF-8 UTF-8' /etc/locale.gen
+sed -i '/^# zh_CN.UTF-8 UTF-8$/c zh_CN.UTF-8 UTF-8' /etc/locale.gen
+sed -i '/^# en_AU.UTF-8 UTF-8$/c en_AU.UTF-8 UTF-8' /etc/locale.gen
+sed -i '/^# en_CA.UTF-8 UTF-8$/c en_CA.UTF-8 UTF-8' /etc/locale.gen
+sed -i '/^# en_GB.UTF-8 UTF-8$/c en_GB.UTF-8 UTF-8' /etc/locale.gen
+sed -i '/^# en_HK.UTF-8 UTF-8$/c en_HK.UTF-8 UTF-8' /etc/locale.gen
+sed -i '/^# en_SG.UTF-8 UTF-8$/c en_SG.UTF-8 UTF-8' /etc/locale.gen
 locale-gen
 
 # Network settings
@@ -360,8 +383,8 @@ net.ipv6.conf.default.disable_ipv6 = 1
 # It will run on Docker.
 ## dnsmasq
 apt-get install -y \
-  dnsmasq \
-  resolvconf
+dnsmasq \
+resolvconf
 systemctl disable dnsmasq.service
 cp /etc/dnsmasq.conf /etc/rdbox/dnsmasq.conf.org
 mv /etc/dnsmasq.conf /etc/dnsmasq.conf.org
@@ -370,7 +393,7 @@ ln -s /etc/rdbox/dnsmasq.conf /etc/dnsmasq.conf
 
 # enable auto update & upgrade
 apt-get install -y \
-  unattended-upgrades
+unattended-upgrades
 echo -e 'APT::Periodic::Update-Package-Lists "1";\nAPT::Periodic::Unattended-Upgrade "1";\n' > /etc/apt/apt.conf.d/20auto-upgrades
 echo -e 'Unattended-Upgrade::Origins-Pattern {
   origin=Raspbian,label=Raspbian;
@@ -383,13 +406,11 @@ Unattended-Upgrade::Automatic-Reboot "false";
 
 # install NFS
 apt-get install -y \
-  nfs-kernel-server \
-  nfs-common
+nfs-kernel-server \
+nfs-common
 sudo systemctl disable nfs-kernel-server.service
 
-# install transproxy
-apt-get install -y \
-  transproxy
+# config transproxy
 echo '# transproxy.conf
 # vim: syntax=toml
 # version: 0.0.1
@@ -508,26 +529,26 @@ parameter-http-https-iptables = ""
 
 # For Helm(k8s)
 apt-get install -y \
-  snapd
+snapd
 ln -s /snap/bin/helm /usr/local/bin/helm
 
 # For Network Debug
 apt-get install -y \
-  dnsutils \
-  traceroute
+dnsutils \
+traceroute
 
 ## For ansible
 apt-get install -y \
-  libffi-dev \
-  python3-crypto \
-  build-essential \
-  fakeroot \
-  zlib1g \
-  libssl-dev \
-  python3-dev
+libffi-dev \
+python3-crypto \
+build-essential \
+fakeroot \
+zlib1g \
+libssl-dev \
+python3-dev
 # For rdbox_cli
 apt-get install -y \
-  hwinfo
+hwinfo
 pip3 install -r /opt/rdbox/bin/requirements.txt
 mkdir -m 777 /etc/ansible
 echo '[ssh_connection]
