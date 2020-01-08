@@ -103,10 +103,6 @@ echo "deb [arch=armhf] https://download.docker.com/linux/raspbian buster $DOCKER
 
 c_rehash
 
-# set up hypriot rpi repository for raspbian specific packages
-echo 'deb https://packagecloud.io/Hypriot/rpi/raspbian/ buster main' >> /etc/apt/sources.list.d/hypriot.list
-curl -L https://packagecloud.io/Hypriot/rpi/gpgkey | apt-key add -
-
 RPI_ORG_FPR=CF8A1AF502A2AA2D763BAE7E82B129927FA3303E RPI_ORG_KEY_URL=http://archive.raspberrypi.org/debian/raspberrypi.gpg.key
 get_gpg "${RPI_ORG_FPR}" "${RPI_ORG_KEY_URL}"
 
@@ -247,6 +243,17 @@ mkdir -p /var/lib/cloud/seed/nocloud-net
 ln -s /boot/user-data /var/lib/cloud/seed/nocloud-net/user-data
 ln -s /boot/meta-data /var/lib/cloud/seed/nocloud-net/meta-data
 
+mv /etc/fake-hwclock.data /boot/fake-hwclock.data
+ln -s /boot/fake-hwclock.data /etc/fake-hwclock.data
+mkdir -p /etc/systemd/system/fake-hwclock.service.d
+cat <<EOM |tee /etc/systemd/system/fake-hwclock.service.d/override.conf
+[Unit]
+After=boot.mount
+#Wants=boot.mount
+#Requires=boot.mount
+EOM
+systemctl daemon-reload
+
 # Fix duplicate IP address for eth0, remove file from os-rootfs
 rm -f /etc/network/interfaces.d/eth0
 
@@ -259,14 +266,10 @@ curl -sSL "https://raw.githubusercontent.com/docker/machine/v${DOCKER_MACHINE_VE
 
 # install docker-compose
 apt-get install -y \
---no-install-recommends \
-python \
-python3
-apt-get install -y \
-python3-distutils
-curl -sSL https://bootstrap.pypa.io/get-pip.py | python
-curl -sSL https://bootstrap.pypa.io/get-pip.py | python3
-pip install "docker-compose==${DOCKER_COMPOSE_VERSION}"
+  --no-install-recommends \
+  python3 python3-pip
+update-alternatives --install /usr/bin/python python /usr/bin/python3.7 2
+pip3 install "docker-compose==${DOCKER_COMPOSE_VERSION}"
 
 # install bash completion for Docker Compose
 curl -sSL "https://raw.githubusercontent.com/docker/compose/${DOCKER_COMPOSE_VERSION}/contrib/completion/bash/docker-compose" -o /etc/bash_completion.d/docker-compose
