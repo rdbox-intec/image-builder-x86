@@ -300,7 +300,7 @@ if [ "${BUILDER}" = "cloud" ]; then
     systemctl disable hostapd.service
     apt-get install -y \
     transproxy
-    elif [ "${BUILDER}" = "local" ]; then
+elif [ "${BUILDER}" = "local" ]; then
     ## rdbox
     apt-get install -y \
     gdebi
