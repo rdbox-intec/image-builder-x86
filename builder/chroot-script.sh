@@ -267,7 +267,7 @@ curl -sSL "https://raw.githubusercontent.com/docker/machine/v${DOCKER_MACHINE_VE
 # install docker-compose
 apt-get install -y \
   --no-install-recommends \
-  python3 python3-pip
+  python3 python3-pip python3-setuptools
 update-alternatives --install /usr/bin/python python /usr/bin/python3.7 2
 pip3 install "docker-compose==${DOCKER_COMPOSE_VERSION}"
 
@@ -322,7 +322,7 @@ fi
 # Built in WiFi
 ## suppress NIC barrel
 echo 'SUBSYSTEM=="net", ACTION=="add", DRIVERS=="?*", ATTR{address}=="b8:27:eb:??:??:??", ATTR{dev_id}=="0x0", ATTR{type}=="1", KERNEL=="eth*", NAME="eth0"
-SUBSYSTEM=="net", ACTION=="add", DRIVERS=="?*", ATTR{address}=="b8:27:eb:??:??:??", ATTR{dev_id}=="0x0", ATTR{type}=="1", KERNEL=="wlan*", NAME="wlan10"
+SUBSYSTEM=="net", ACTION=="add", DRIVERS=="?*", ATTR{address}=="b8:27:eb:*", ATTR{dev_id}=="0x0", ATTR{type}=="1", KERNEL=="wlan*", NAME="wlan0"
 ' > /etc/udev/rules.d/70-persistent-net.rules
 
 # enable daemon.json
