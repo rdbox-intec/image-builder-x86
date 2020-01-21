@@ -1,0 +1,35 @@
+version: 2
+jobs:
+  build:
+    machine: true
+    steps:
+      - checkout
+
+      - run:
+          name: Run Shellcheck
+          command: |
+            make shellcheck
+
+      - run:
+          name: Create SD image
+          command: |
+            VERSION=${CIRCLE_TAG} make sd-image-rdbox
+
+      - run:
+          name: Prepare artifacts
+          command: |
+            mkdir -p output
+            cp hypriotos*zip* output/
+
+      - store_artifacts:
+          path: /home/circleci/project/output
+
+
+workflows:
+  version: 2
+  build_and_deploy:
+    jobs:
+      - build:
+          filters:
+            tags:
+              only: /.*/

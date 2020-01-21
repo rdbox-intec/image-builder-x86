@@ -1,0 +1,15 @@
+# ensure that the correct firmware packages from the 
+# Raspberry Pi Foundation get installed
+# those packages are usually the most recent ones
+
+Package: firmware-*
+Pin: origin archive.raspberrypi.org
+Pin-Priority: 1001
+
+Package: libraspberrypi*
+Pin: origin archive.raspberrypi.org
+Pin-Priority: 1001
+
+Package: raspberrypi-bootloader
+Pin: origin archive.raspberrypi.org
+Pin-Priority: 1001
