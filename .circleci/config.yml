@@ -12,11 +12,13 @@ jobs:
 
       - run:
           name: Create USB image(SATA Legacy)
+          no_output_timeout: 45m
           command: |
             VERSION=${CIRCLE_TAG} make usb-image-rdbox-legacy-sata
 
       - run:
           name: Create USB image(SATA UEFI)
+          no_output_timeout: 45m
           command: |
             VERSION=${CIRCLE_TAG} make usb-image-rdbox-uefi-sata 
 
