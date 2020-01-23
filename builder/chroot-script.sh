@@ -318,6 +318,7 @@ elif [ "${BUILDER}" = "local" ]; then
     systemctl disable wpa_supplicant.service
     gdebi -n "$(echo /tmp/deb-files/*transproxy_*.deb | grep -v dbgsym | sed 's/ /\n/g' | sort -r | head -1)"
 fi
+apt-mark hold rdbox
 
 # Built in WiFi
 ## suppress NIC barrel
@@ -345,6 +346,7 @@ kubelet="${KUBEADM_VERSION}" \
 kubeadm="${KUBEADM_VERSION}" \
 kubectl="${KUBEADM_VERSION}" \
 kubernetes-cni="${KUBERNETES_CNI_VERSION}"
+apt-mark hold kubelet kubeadm kubectl kubernetes-cni
 
 # Security settings
 ## /etc/ssh/sshd_config

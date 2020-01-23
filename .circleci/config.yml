@@ -12,6 +12,7 @@ jobs:
 
       - run:
           name: Create SD image
+          no_output_timeout: 45m
           command: |
             VERSION=${CIRCLE_TAG} make sd-image-rdbox
 
@@ -24,6 +25,17 @@ jobs:
       - store_artifacts:
           path: /home/circleci/project/output
 
+      - deploy:
+          name: Deploy
+          command: |
+            if [ "$CIRCLE_TAG" != "" ]; then
+              curl -sSL https://github.com/tcnksm/ghr/releases/download/v0.12.0/ghr_v0.12.0_linux_amd64.tar.gz -o ghr.tar.gz
+              tar xzf ghr.tar.gz
+              if [[ $CIRCLE_TAG = *"rc"* ]]; then
+                pre=-prerelease
+              fi
+              ./ghr_v0.12.0_linux_amd64/ghr $pre -u rdbox-intec -r rdbox $CIRCLE_TAG output/
+            fi
 
 workflows:
   version: 2
