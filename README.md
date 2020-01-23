@@ -1,14 +1,13 @@
-# image-builder-rpi For RDBOX. 
+# image-builder-x86 
 
 forked from [HypriotOS](https://github.com/hypriot/image-builder-rpi)  
 The major design pattern of this software was abstracted from hypriot's image-builder-rpi, which is subject to the same license.
 
-This repo builds the SD card image with RDBOX based on HypriotOS for the Raspberry Pi 3 series.
-You can find released versions of the SD card image here in the GitHub
-[releases page](./releases). To build this SD card image we have to
+This repo builds the USB image with RDBOX based on HypriotOS for the x86 PC.
+You can find released versions of the USB image here in the GitHub
+[releases page](./releases). To build this USB image we have to
 
-* take the files for the root filesystem from [`os-rootfs`](https://github.com/hypriot/os-rootfs)
-* take the empty raw filesystem from [`image-builder-raw`](https://github.com/hypriot/image-builder-raw) with the two partitions
+* take the empty raw filesystem from [`image-builder-raw`](https://github.com/rdbox-intec/image-builder-raw) with the two partitions
 * install Docker tools Docker Engine, Docker Compose and Docker Machine
 * install kubernetes by kubeadmn.
 * Device settings are set so that turtlebot 3 can be used in haste.
@@ -28,7 +27,7 @@ You can find released versions of the SD card image here in the GitHub
 You can contribute to this repo by forking it and sending us pull requests.
 Feedback is always welcome!
 
-You can build the SD card image locally with Vagrant.
+You can build the USB image locally with Vagrant.
 
 ### Setting up build environment
 
@@ -56,13 +55,14 @@ docker info | grep 'Operating System'
 Operating System: Ubuntu 16.04.4 LTS
 ```
 
-### Build the SD card image
+### Build the USB image
 
-From here you can just make the SD card image. The output will be written and
+From here you can just make the USB image. The output will be written and
 compressed to `hypriotos-rpi-v1.10.0.rdbox-v0.0.25.img.zip'
 
 ```bash
-make sd-image-rdbox
+ make usb-image-rdbox-local-legacy-sata  
+ make usb-image-rdbox-local-uefi-sata
 ```
 
 ### Run Serverspec tests
