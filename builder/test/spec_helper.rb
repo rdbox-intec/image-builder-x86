@@ -2,7 +2,7 @@ require 'serverspec'
 set :backend, :exec
 
 def image_path
-  return "hypriotos-x86-#{ENV['VERSION']}.img"
+  return "hypriotos-x86-#{ENV['BOOT_MODE']}-#{ENV['DISK_TYPE']}-#{ENV['VERSION']}.img"
 end
 
 def run( cmd )

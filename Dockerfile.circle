@@ -6,8 +6,13 @@ RUN apt-get update && \
     qemu \
     qemu-user-static \
     xxd \
+    live-boot \
+    live-build \
+    live-config \
     --no-install-recommends && \
     rm -rf /var/lib/apt/lists/*
+
+RUN sed -i '1161s%umount%#umount%' /usr/share/debootstrap/functions
 
 COPY builder/ /builder/
 

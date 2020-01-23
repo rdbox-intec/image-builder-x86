@@ -18,6 +18,11 @@ BUILD_RESULT_PATH="/workspace"
 # place to build our sd-image
 BUILD_PATH="/build"
 
+# BootMode(legacy or uefi)
+BOOT_MODE=${3:="legacy"}
+# DiskType(SATA or NVMe)
+DISK_TYPE=${4:="sata"}
+
 # Show CIRCLE_TAG in Circle builds
 echo CIRCLE_TAG="${CIRCLE_TAG}"
 
@@ -28,7 +33,7 @@ else
   VERSION=${VERSION}_$1
 fi
 HYPRIOT_IMAGE_VERSION=${VERSION:="dirty"}
-HYPRIOT_IMAGE_NAME="hypriotos-x86-${HYPRIOT_IMAGE_VERSION}.img"
+HYPRIOT_IMAGE_NAME="hypriotos-x86-${BOOT_MODE}-${DISK_TYPE}-${HYPRIOT_IMAGE_VERSION}.img"
 export HYPRIOT_IMAGE_VERSION
 
 # download the ready-made raw image for the x86
@@ -78,6 +83,9 @@ libpam-systemd
 cloud-init
 gpg
 EOF
+if [ "${BOOT_MODE}" = "uefi" ]; then
+  echo "grub-efi-amd64" >> ${BUILD_PATH}/config/package-lists/os-rootfs.list.chroot
+fi
 lb bootstrap
 lb chroot
 
@@ -122,7 +130,7 @@ lb installer
 #############
 mkdir ${BUILD_PATH}/initrd
 gunzip < ${BUILD_PATH}/binary/install/initrd.gz | cpio -i -D ${BUILD_PATH}/initrd/
-cp -rf ${BUILD_RESULT_PATH}/preseed.cfg ${BUILD_PATH}/initrd/preseed.cfg
+cp -rf ${BUILD_RESULT_PATH}/preseed/${BOOT_MODE}/${DISK_TYPE}/preseed.cfg ${BUILD_PATH}/initrd/preseed.cfg
 cd ${BUILD_PATH}/initrd
 find . | cpio -H newc --create | gzip -9 >  ../initrd.gz
 cd ${BUILD_PATH}
@@ -145,13 +153,17 @@ unzip -p "${BUILD_RESULT_PATH}/${RAW_IMAGE}" > "${BUILD_RESULT_PATH}/${HYPRIOT_I
 cp -rL ${BUILD_PATH}/binary ${BUILD_PATH}/rdbox 2>/dev/null || :
 cp -rf ${BUILD_RESULT_PATH}/syslinux.cfg ${BUILD_PATH}/rdbox
 cp -rf /builder/files/boot/* ${BUILD_PATH}/rdbox
-cp -rf ${BUILD_RESULT_PATH}/splash.png ${BUILD_PATH}/rdbox/splash.png
-cp -rf ${BUILD_RESULT_PATH}/splash.png ${BUILD_PATH}/rdbox/isolinux/splash.png
+cp -rf ${BUILD_RESULT_PATH}/preseed/${BOOT_MODE}/${DISK_TYPE}/splash.png ${BUILD_PATH}/rdbox/splash.png
+cp -rf ${BUILD_RESULT_PATH}/preseed/${BOOT_MODE}/${DISK_TYPE}/splash.png ${BUILD_PATH}/rdbox/isolinux/splash.png
 sed -i '/^label=/c label=HypriotOS' ${BUILD_PATH}/rdbox/autorun.inf
 sed -i '/^timeout/c timeout 30' ${BUILD_PATH}/rdbox/isolinux/isolinux.cfg
 sed -i -e '3i\
 \tmenu default' ${BUILD_PATH}/rdbox/isolinux/install.cfg
+echo 'set timeout=3' >> ${BUILD_PATH}/rdbox/boot/grub/grub.cfg
+echo 'set default=0' >> ${BUILD_PATH}/rdbox/boot/grub/grub.cfg
+sed -ie '/^# Live boot$/a menuentry "Install" {\n\tlinux\t/install/vmlinuz vga=normal quiet preseed/file=/preseed.cfg\n\tinitrd\t/install/initrd.gz\n}' ${BUILD_PATH}/rdbox/boot/grub/grub.cfg
 cd ${BUILD_PATH}/rdbox
+du -sh
 tar cvzf /rdbox.tar.gz .
 ls -lah /rdbox.tar.gz
 #############
@@ -175,4 +187,4 @@ cd ${BUILD_RESULT_PATH} && sha256sum "${HYPRIOT_IMAGE_NAME}.zip" > "${HYPRIOT_IM
 
 # test sd-image that we have built
 cd ${BUILD_RESULT_PATH}
-VERSION=${HYPRIOT_IMAGE_VERSION} rspec --format documentation --color ${BUILD_RESULT_PATH}/builder/test > ${BUILD_RESULT_PATH}/testresult.log
+VERSION=${HYPRIOT_IMAGE_VERSION} BOOT_MODE=${BOOT_MODE} DISK_TYPE=${DISK_TYPE} rspec --format documentation --color ${BUILD_RESULT_PATH}/builder/test > ${BUILD_RESULT_PATH}/testresult.log

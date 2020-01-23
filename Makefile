@@ -1,19 +1,19 @@
 default: build
 
 build:
-	docker build -f Dockerfile.circle -t image-builder-rpi .
+	docker build -f Dockerfile.circle -t image-builder-x86 .
 
 sd-image: build
-	docker run --rm --privileged -v $(shell pwd):/workspace -v /boot:/boot -v /lib/modules:/lib/modules -e CIRCLE_TAG -e VERSION image-builder-rpi
+	docker run --rm --privileged -v $(shell pwd):/workspace -v /boot:/boot -v /lib/modules:/lib/modules -e CIRCLE_TAG -e VERSION image-builder-x86
 
 shell: build
-	docker run -ti --privileged -v $(shell pwd):/workspace -v /boot:/boot -v /lib/modules:/lib/modules -e CIRCLE_TAG -e VERSION image-builder-rpi bash
+	docker run -ti --privileged -v $(shell pwd):/workspace -v /boot:/boot -v /lib/modules:/lib/modules -e CIRCLE_TAG -e VERSION image-builder-x86 bash
 
 test:
-	VERSION=dirty docker run --rm -ti --privileged -v $(shell pwd):/workspace -v /boot:/boot -v /lib/modules:/lib/modules -e CIRCLE_TAG -e VERSION image-builder-rpi bash -c "unzip /workspace/hypriotos-rpi-dirty.img.zip && rspec --format documentation --color /workspace/builder/test/*_spec.rb"
+	VERSION=dirty docker run --rm -ti --privileged -v $(shell pwd):/workspace -v /boot:/boot -v /lib/modules:/lib/modules -e CIRCLE_TAG -e VERSION image-builder-x86 bash -c "unzip /workspace/hypriotos-rpi-dirty.img.zip && rspec --format documentation --color /workspace/builder/test/*_spec.rb"
 
 shellcheck: build
-	VERSION=dirty docker run --rm -ti -v $(shell pwd):/workspace image-builder-rpi bash -c 'shellcheck /workspace/builder/*.sh /workspace/builder/files/var/lib/cloud/scripts/per-once/*'
+	VERSION=dirty docker run --rm -ti -v $(shell pwd):/workspace image-builder-x86 bash -c 'shellcheck /workspace/builder/*.sh /workspace/builder/files/var/lib/cloud/scripts/per-once/*'
 
 test-integration: test-integration-image test-integration-docker
 
@@ -37,23 +37,21 @@ build-local:
 	
 clean:
 	rm -rf *.log
+	rm -rf *.img
 	rm -rf *.img.zip
 	rm -rf *.img.zip.sha256
 	rm -rf rootfs-armhf-raspbian-*.tar.gz
 	rm -rf rpi-raw.img.zip
 	rm -rf builder/files/tmp/deb-files/*
 
-sd-image-rdbox: build
-	docker run --rm --privileged -v $(shell pwd):/workspace -v /boot:/boot -v /lib/modules:/lib/modules -e CIRCLE_TAG -e VERSION image-builder-rpi /builder/build.sh rdbox cloud
+usb-image-rdbox-legacy-sata: build
+	docker run --rm --privileged -v $(shell pwd):/workspace -v /boot:/boot -v /lib/modules:/lib/modules -e CIRCLE_TAG -e VERSION image-builder-x86 /builder/build.sh rdbox cloud legacy sata
 
-sd-image-turtlebot3: build
-	docker run --rm --privileged -v $(shell pwd):/workspace -v /boot:/boot -v /lib/modules:/lib/modules -e CIRCLE_TAG -e VERSION image-builder-rpi /builder/build.sh with_tb3 cloud
+usb-image-rdbox-uefi-sata: build
+	docker run --rm --privileged -v $(shell pwd):/workspace -v /boot:/boot -v /lib/modules:/lib/modules -e CIRCLE_TAG -e VERSION image-builder-x86 /builder/build.sh rdbox cloud uefi sata
 
-sd-image-rdbox-local: build-local
-	docker run --rm --privileged -v $(shell pwd):/workspace -v /boot:/boot -v /lib/modules:/lib/modules -e CIRCLE_TAG -e VERSION image-builder-rpi /builder/build.sh rdbox local
+usb-image-rdbox-local-legacy-sata: build-local
+	docker run --rm --privileged -v $(shell pwd):/workspace -v /boot:/boot -v /lib/modules:/lib/modules -e CIRCLE_TAG -e VERSION image-builder-x86 /builder/build.sh rdbox local legacy sata
 
-sd-image-turtlebot3-local: build-local
-	docker run --rm --privileged -v $(shell pwd):/workspace -v /boot:/boot -v /lib/modules:/lib/modules -e CIRCLE_TAG -e VERSION image-builder-rpi /builder/build.sh with_tb3 local
-
-usb-image-rdbox-local: build-local
-	docker run --rm --privileged -v $(shell pwd):/workspace -v /boot:/boot -v /lib/modules:/lib/modules -e CIRCLE_TAG -e VERSION image-builder-x86 /builder/build.sh rdbox local
+usb-image-rdbox-local-uefi-sata: build-local
+	docker run --rm --privileged -v $(shell pwd):/workspace -v /boot:/boot -v /lib/modules:/lib/modules -e CIRCLE_TAG -e VERSION image-builder-x86 /builder/build.sh rdbox local uefi sata
