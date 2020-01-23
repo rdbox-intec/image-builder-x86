@@ -34,7 +34,7 @@ jobs:
               if [[ $CIRCLE_TAG = *"rc"* ]]; then
                 pre=-prerelease
               fi
-              ./ghr_v0.12.0_linux_amd64/ghr $pre -u rdbox-intec -r rdbox $CIRCLE_TAG output/
+              ./ghr_v0.12.0_linux_amd64/ghr $pre -u rdbox-intec -r rdbox $(echo $CIRCLE_TAG | cut -f 4 -d "-" | tr -d "\n") output/
             fi
 
 workflows:
