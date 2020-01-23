@@ -130,7 +130,7 @@ lb installer
 #############
 mkdir ${BUILD_PATH}/initrd
 gunzip < ${BUILD_PATH}/binary/install/initrd.gz | cpio -i -D ${BUILD_PATH}/initrd/
-cp -rf ${BUILD_RESULT_PATH}/preseed/${BOOT_MODE}/${DISK_TYPE}/preseed.cfg ${BUILD_PATH}/initrd/preseed.cfg
+cp -rf ${BUILD_RESULT_PATH}/preseed/"${BOOT_MODE}"/"${DISK_TYPE}"/preseed.cfg ${BUILD_PATH}/initrd/preseed.cfg
 cd ${BUILD_PATH}/initrd
 find . | cpio -H newc --create | gzip -9 >  ../initrd.gz
 cd ${BUILD_PATH}
@@ -153,10 +153,11 @@ unzip -p "${BUILD_RESULT_PATH}/${RAW_IMAGE}" > "${BUILD_RESULT_PATH}/${HYPRIOT_I
 cp -rL ${BUILD_PATH}/binary ${BUILD_PATH}/rdbox 2>/dev/null || :
 cp -rf ${BUILD_RESULT_PATH}/syslinux.cfg ${BUILD_PATH}/rdbox
 cp -rf /builder/files/boot/* ${BUILD_PATH}/rdbox
-cp -rf ${BUILD_RESULT_PATH}/preseed/${BOOT_MODE}/${DISK_TYPE}/splash.png ${BUILD_PATH}/rdbox/splash.png
-cp -rf ${BUILD_RESULT_PATH}/preseed/${BOOT_MODE}/${DISK_TYPE}/splash.png ${BUILD_PATH}/rdbox/isolinux/splash.png
+cp -rf ${BUILD_RESULT_PATH}/preseed/"${BOOT_MODE}"/"${DISK_TYPE}"/splash.png ${BUILD_PATH}/rdbox/splash.png
+cp -rf ${BUILD_RESULT_PATH}/preseed/"${BOOT_MODE}"/"${DISK_TYPE}"/splash.png ${BUILD_PATH}/rdbox/isolinux/splash.png
 sed -i '/^label=/c label=HypriotOS' ${BUILD_PATH}/rdbox/autorun.inf
 sed -i '/^timeout/c timeout 30' ${BUILD_PATH}/rdbox/isolinux/isolinux.cfg
+# shellcheck disable=SC1004
 sed -i -e '3i\
 \tmenu default' ${BUILD_PATH}/rdbox/isolinux/install.cfg
 echo 'set timeout=3' >> ${BUILD_PATH}/rdbox/boot/grub/grub.cfg
