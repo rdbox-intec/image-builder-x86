@@ -16,9 +16,9 @@ jobs:
             VERSION=${CIRCLE_TAG} make usb-image-rdbox-legacy-sata
 
       - run:
-        name: Create USB image(SATA UEFI)
-        command: |
-          VERSION=${CIRCLE_TAG} make usb-image-rdbox-uefi-sata 
+          name: Create USB image(SATA UEFI)
+          command: |
+            VERSION=${CIRCLE_TAG} make usb-image-rdbox-uefi-sata 
 
       - run:
           name: Prepare artifacts
@@ -30,16 +30,16 @@ jobs:
           path: /home/circleci/project/output
 
       - deploy:
-        name: Deploy
-        command: |
-          if [ "$CIRCLE_TAG" != "" ]; then
-            curl -sSL https://github.com/tcnksm/ghr/releases/download/v0.12.0/ghr_v0.12.0_linux_amd64.tar.gz -o ghr.tar.gz
-            tar xzf ghr.tar.gz
-            if [[ $CIRCLE_TAG = *"rc"* ]]; then
-              pre=-prerelease
+          name: Deploy
+          command: |
+            if [ "$CIRCLE_TAG" != "" ]; then
+              curl -sSL https://github.com/tcnksm/ghr/releases/download/v0.12.0/ghr_v0.12.0_linux_amd64.tar.gz -o ghr.tar.gz
+              tar xzf ghr.tar.gz
+              if [[ $CIRCLE_TAG = *"rc"* ]]; then
+                pre=-prerelease
+              fi
+              ./ghr_v0.12.0_linux_amd64/ghr $pre -u rdbox-intec -r rdbox $CIRCLE_TAG output/
             fi
-            ./ghr_v0.12.0_linux_amd64/ghr $pre -u rdbox-intec -r rdbox $CIRCLE_TAG output/
-          fi
 
 workflows:
   version: 2
