@@ -456,7 +456,8 @@ libssl-dev \
 python3-dev
 # For rdbox_cli
 apt-get install -y \
-hwinfo
+hwinfo \
+libcairo2-dev
 pip3 install -r /opt/rdbox/bin/requirements.txt
 mkdir -m 777 /etc/ansible
 echo '[ssh_connection]
