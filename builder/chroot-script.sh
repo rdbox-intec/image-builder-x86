@@ -249,7 +249,7 @@ ln -s /boot/fake-hwclock.data /etc/fake-hwclock.data
 mkdir -p /etc/systemd/system/fake-hwclock.service.d
 cat <<EOM |tee /etc/systemd/system/fake-hwclock.service.d/override.conf
 [Unit]
-After=boot.mount
+Before=systemd-fsck-root.service
 #Wants=boot.mount
 #Requires=boot.mount
 EOM
@@ -290,8 +290,9 @@ curl -sSL "https://raw.githubusercontent.com/docker/compose/${DOCKER_COMPOSE_VER
 
 # install docker-ce (w/ install-recommends)
 apt-get install -y --force-yes \
---no-install-recommends \
-"docker-ce=${DOCKER_CE_VERSION}"
+  --no-install-recommends \
+  "docker-ce-cli=${DOCKER_CE_VERSION}" \
+  "docker-ce=${DOCKER_CE_VERSION}"
 
 # install bash completion for Docker CLI
 curl -sSL https://raw.githubusercontent.com/docker/docker-ce/master/components/cli/contrib/completion/bash/docker -o /etc/bash_completion.d/docker
