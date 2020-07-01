@@ -199,6 +199,7 @@ if [ "${BUILDER}" = "cloud" ]; then
     systemctl disable rdbox-boot.service
     # our repo
     apt-get install -y \
+    softether-vpnclient \
     softether-vpnbridge \
     softether-vpncmd
     apt-get install -y \
@@ -215,6 +216,7 @@ elif [ "${BUILDER}" = "local" ]; then
     # our repo
     gdebi -n "$(echo /tmp/deb-files/*softether-vpncmd_*.deb | grep -v dbgsym | sed 's/ /\n/g' | sort -r | head -1)"
     gdebi -n "$(echo /tmp/deb-files/*softether-vpnbridge_*.deb | grep -v dbgsym | sed 's/ /\n/g' | sort -r | head -1)"
+    gdebi -n "$(echo /tmp/deb-files/*softether-vpnclient_*.deb | grep -v dbgsym | sed 's/ /\n/g' | sort -r | head -1)"
     apt-get install -y \
     hostapd
     systemctl disable hostapd.service
@@ -291,9 +293,11 @@ net.ipv6.conf.default.disable_ipv6 = 1
 # It will run on Docker.
 ## dnsmasq
 apt-get install -y \
+bind9 \
 dnsmasq \
 resolvconf
 systemctl disable dnsmasq.service
+systemctl disable bind9
 cp /etc/dnsmasq.conf /etc/rdbox/dnsmasq.conf.org
 mv /etc/dnsmasq.conf /etc/dnsmasq.conf.org
 touch /etc/rdbox/dnsmasq.conf
