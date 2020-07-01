@@ -31,8 +31,9 @@ tag:
 # RDBOX #################################################
 build-local:
 	mkdir -p ./builder/files/tmp/deb-files/
-	cp -rf ../image-builder-raw/x86-raw.img.zip .
+	#cp -rf ../image-builder-raw/x86-raw.img.zip .
 	cp -rf /var/cache/pbuilder/debian-buster-amd64/result/*.deb ./builder/files/tmp/deb-files/
+	cp -rf /var/cache/pbuilder/ubuntu-bionic-amd64/result/*.deb ./builder/files/tmp/deb-files/
 	docker build -t image-builder-x86 .
 	
 clean:
