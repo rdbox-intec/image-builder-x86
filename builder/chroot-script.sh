@@ -169,13 +169,11 @@ chmod +x /usr/local/bin/docker-machine
 # install bash completion for Docker Machine
 curl -sSL "https://raw.githubusercontent.com/docker/machine/v${DOCKER_MACHINE_VERSION}/contrib/completion/bash/docker-machine.bash" -o /etc/bash_completion.d/docker-machine
 
-# install docker-compose
+# [PRE] install docker-compose
 apt-get install -y \
   --no-install-recommends \
   python3 python3-pip python3-setuptools
 update-alternatives --install /usr/bin/python python /usr/bin/python3.7 2
-pip3 install wheel
-pip3 install "docker-compose==${DOCKER_COMPOSE_VERSION}"
 
 # install bash completion for Docker Compose
 curl -sSL "https://raw.githubusercontent.com/docker/compose/${DOCKER_COMPOSE_VERSION}/contrib/completion/bash/docker-compose" -o /etc/bash_completion.d/docker-compose
@@ -322,123 +320,6 @@ nfs-kernel-server \
 nfs-common
 sudo systemctl disable nfs-kernel-server.service
 
-# config transproxy
-echo '# transproxy.conf
-# vim: syntax=toml
-# version: 0.0.1
-
-## Log level, one of: debug, info, warn, error, fatal, panic
-## default:info
-## type:string
-loglevel-local = "debug"
-
-## Private DNS address for no_proxy targets (IP[:port])
-## default:""(empty string)
-## type:string
-private-dns = ""
-
-## Public DNS address (IP[:port]) Note: Your proxy needs to support CONNECT method to the Public DNS port, and the public DNS needs to support TCP
-## default:""(empty string)
-## type:string
-public-dns = ""
-
-## TCP Proxy dports, as "port1,port2,..."
-## default:"22"
-## type:string
-tcp-proxy-dports = "22"
-
-## TCP Proxy listen address, as "[host]:port"
-## default:":3128"
-## type:string
-tcp-proxy-listen = ":3128"
-
-## HTTP Proxy listen addres, as "[host]:port"
-## default:":3129"
-## type:string
-http-proxy-listen = ":3129"
-
-## HTTPS Proxy listen addres, as "[host]:port"
-## default:":3130"
-## type:string
-https-proxy-listen = ":3130"
-
-## DNS Proxy listen addres, as "[host]:port"
-## default:":3130"
-## type:string
-dns-proxy-listen = ":3131"
-
-## Explicit Proxy listen address for HTTP/HTTPS, as [host]:port Note: This proxy doesnt use authentication info of the http_proxy and https_proxy environment variables
-## default:":3132"
-## type:string
-explicit-proxy-listen = ":3132"
-
-## Explicit Proxy with auth listen address for HTTP/HTTPS, as [host]:port Note: This proxy uses authentication info of the http_proxy and https_proxy environment variables
-## default:":3133"
-## type:string
-explicit-proxy-with-auth-listen = ":3133"
-
-## Boot Explicit Proxies only"
-## default:false
-## type:bool
-explicit-proxy-only = false
-
-## Disable DNS-over-TCP for querying to public DNS
-## default:false
-## type:bool
-dns-over-tcp-disabled = false
-
-## Use DNS-over-HTTPS service as public DNS
-## default:false
-## type:bool
-dns-over-https-enabled = true
-
-## DNS-over-HTTPS endpoint URL
-## default:"https://dns.google.com/resolve"
-## type:string
-dns-over-https-endpoint = "https://dns.google.com/resolve"
-
-## DNS Listen on TCP
-## default:true
-## type:bool
-dns-tcp = true
-
-## DNS Listen on UDP
-## default:true
-## type:bool
-dns-udp = true
-
-## Disable automatic iptables configuration
-## default:false
-## type:bool
-disable-iptables = false
-
-## If true, use the local DNS resolver preferentially. If unknown hostname, transproxy will process it. (local DNS resolver, dnsmasq, systemd-resolved.....)
-## default:false
-## type:bool
-prefer-local-dns-reolver = true
-
-## Set to true to execute a transparent proxy on each computer.
-## default:false
-## type:bool
-execute-standalone = true
-
-## Disable tcps transproxy.
-## default:false
-## type:bool
-disable-tcpproxy = true
-
-## Disable dnss transproxy.
-## default:false
-## type:bool
-disable-dnsproxy = false
-
-## Specify additional parameters.(etc. "-i eth0")
-## default:""(empty string)
-## type:string
-parameter-http-https-iptables = ""
-' > /etc/transproxy/transproxy.conf
-
-
 # For Helm(k8s)
 apt-get install -y \
 snapd
@@ -469,6 +350,10 @@ ssh_args = -o ControlMaster=auto -o ControlPersist=60s -o StrictHostKeyChecking=
 [defaults]
 retry_files_save_path = "/tmp"
 ' > /etc/ansible/ansible.cfg
+
+# install docker-compose
+pip3 install wheel
+pip3 install "docker-compose==${DOCKER_COMPOSE_VERSION}"
 
 # disable dhcpcd
 systemctl disable dhcpcd.service

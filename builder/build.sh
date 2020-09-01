@@ -106,6 +106,7 @@ lb chroot_archives chroot install
 #===========================================================================================
 cp -R /builder/files/* ${BUILD_PATH}/chroot/
 EDITION=$1 BUILDER=$2 chroot ${BUILD_PATH}/chroot /bin/bash < /builder/chroot-script.sh
+cp -R /builder/last_files/* ${BUILD_PATH}/chroot/
 #===========================================================================================
 lb chroot_archives chroot remove
 lb chroot_apt remove
