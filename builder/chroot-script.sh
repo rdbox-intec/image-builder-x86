@@ -115,7 +115,7 @@ Pin-Priority: 999' | tee /etc/apt/preferences.d/rdbox
 # install kubeadmn
 curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | apt-key add -
 cat <<EOF >/etc/apt/sources.list.d/kubernetes.list
-deb http://apt.kubernetes.io/ kubernetes-xenial main
+deb https://apt.kubernetes.io/ kubernetes-xenial main
 EOF
 ################################################ RDBOX #
 
@@ -328,6 +328,7 @@ ln -s /snap/bin/helm /usr/local/bin/helm
 # For Network Debug
 apt-get install -y \
 dnsutils \
+jq \
 traceroute
 
 ## For ansible

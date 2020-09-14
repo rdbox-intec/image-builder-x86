@@ -1,4 +1,6 @@
-# image-builder-x86 
+# image-builder-x86 For RDBOX
+
+[![CircleCI](https://circleci.com/gh/rdbox-intec/image-builder-x86.svg?style=svg)](https://circleci.com/gh/rdbox-intec/image-builder-x86)
 
 forked from [HypriotOS](https://github.com/hypriot/image-builder-rpi)  
 The major design pattern of this software was abstracted from hypriot's image-builder-rpi, which is subject to the same license.
@@ -7,20 +9,20 @@ This repo builds the USB image with RDBOX based on HypriotOS for the x86 PC.
 You can find released versions of the USB image here in the GitHub
 [releases page](./releases). To build this USB image we have to
 
-* take the empty raw filesystem from [`image-builder-raw`](https://github.com/rdbox-intec/image-builder-raw) with the two partitions
-* install Docker tools Docker Engine, Docker Compose and Docker Machine
-* install kubernetes by kubeadmn.
-* Device settings are set so that turtlebot 3 can be used in haste.
-* install tools of RDBOX networks applications.
-   - transproxy
-   - hostapd
-   - softether-vpn
-   - bridge-util
-   - batctl
-   - dnsmasq
-   - nfs
-   - ntp
-   - etc...
+- take the empty raw filesystem from [`image-builder-raw`](https://github.com/rdbox-intec/image-builder-raw) with the two partitions
+- install Docker tools Docker Engine, Docker Compose and Docker Machine
+- install kubernetes by kubeadmn.
+- Device settings are set so that turtlebot 3 can be used in haste.
+- install tools of RDBOX networks applications.
+  - transproxy
+  - hostapd
+  - softether-vpn
+  - bridge-util
+  - batctl
+  - dnsmasq
+  - nfs
+  - ntp
+  - etc...
 
 ## Contributing
 
@@ -69,16 +71,13 @@ compressed to `hypriotos-rpi-v1.10.0.rdbox-v0.0.25.img.zip'
 
 comming soon.
 
-
 ### Run integration tests
 
 comming soon.
 
-
 ## Deployment
 
 comming soon.
-
 
 ## License
 
